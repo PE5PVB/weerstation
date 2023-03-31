@@ -1,19 +1,19 @@
-#Weerstation
+# Weerstation
 
-##Inleiding
+## Inleiding
 Dit weerstation haalt alle weersinformatie voor jouw regio online op via een API van www.weerlive.nl. Jouw regio wordt bepaald aan de hand van de geografische coördinaten welke verkregen worden door de ingebouwde GPS ontvanger. Deze weersinformatie wordt elke 5 minuten vernieuwd. Mocht er een weerswaarschuwing gelden dan zal dit aangegeven worden met een rood knipperend uitroepteken. Druk op het uitroepteken om deze waarschuwing weer te geven. In dat zelfde scherm worden ook gedetecteerde bliksemontladingen weergegeven.
 Voor radioamateurs is er ook een sectie ingericht waar relevante ruimteweersinformatie wordt weergegeven. Ook worden bandomstandigheden voor DX op korte golf en VHF getoond. Deze informatie wordt verkregen van hamqsl.com. De MUF informatie wordt verkregen van meteo.be. Deze gegevens worden respectievelijk elke 30 seconden en elke 20 seconden vernieuwd.
 Tot slot is het weerstation uitgevoerd met een ingebouwde temperatuurmeter, luchtvochtigheidsmeter en een VOC meter. VOC geeft een indicatie van de luchtkwaliteit. VOC waardes onder 200 zijn prima, bij waardes boven 200 wordt ventilatie aanbevolen. Hoe hoger de waarde, hoe hoger de urgentie. Deze gegevens worden elke 5 seconden vernieuwd.
 In een apart menu worden de GPS statistieken weergegeven. 
 
  
-##Technische werking
+## Technische werking
 Het hart van het weerstation is de ESP32 processor. Deze krachtige processor heeft ook een ingebouwd WiFi station. De software is geschreven op het welbekende Arduino platform. Software laden kan via de seriële poort J1. Hiervoor is wel een UART converter nodig. Om de ESP32 in de download stand te zetten dien je de spanning te verwijderen, de FLASH knop ingedrukt te houden en daarna de spanning terug te plaatsen. Hierna kun je de flash knop loslaten. Nu kun je de software laden.
 Communicatie met de indoor temperatuur en luchtvochtigheid sensor loopt via een OneWire protocol. Dat wil zeggen dat alle data over één lijn loopt. Communicatie met de VOC en bliksemdetector loopt via de I2C databus. Tot slot is de GPS module gekoppeld middels een softwarematige seriële bus. 
 Het Nextion display, dit is een HMI display wat dus zelfstandig werkt en dus ook eigen software heeft is aangesloten via de 2e seriële bus van de ESP32. Updates voor het Nextion scherm lopen via een SD kaart. Deze kan in de SD kaartlezer van het display worden geplaatst. Na het plaatsen dien je even kort de spanning los te halen. Daarna zal de update automatisch starten, de status wordt ook weergegeven op het display. Na de update kun je de SD kaart verwijderen en weer even kort de spanning los koppelen. Het display start daarna automatisch op met de nieuwe software.
 De bliksemdetector analyseert ontvangen signalen op 500kHz met een bandbreedte van 33kHz. Aangezien dit vrij kritisch is, moet de capaciteit van de LC kring ingesteld worden voor een goede werking. Deze kan namelijk exemplarisch afwijken. In dit bouwproject wordt deze waarde automatisch gemeten en bepaald tijdens het opstarten.
 
-##Handleiding
+## Handleiding
 Dit weerstation is geheel afhankelijk van een werkende internet verbinding via Wi-Fi. Na het opstarten zal er eerst geprobeerd een verbinding te maken met het laatst verbonden Wi-Fi accesspoint. Mislukt dit, dan zal er een scherm verschijnen met de vraag om dit opnieuw te proberen. Druk je op het icoontje rechtsboven in het scherm, dan kun je eventueel de Wi-Fi opnieuw configureren.
 
 #Wi-Fi opnieuw configureren
