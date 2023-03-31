@@ -1,5 +1,7 @@
 # Weerstation
 
+![alt text](https://www.radiokampweek.nl/wp-content/uploads/2023/03/bouwproject_2023.jpg)
+
 ## Inleiding
 Dit weerstation haalt alle weersinformatie voor jouw regio online op via een API van www.weerlive.nl. Jouw regio wordt bepaald aan de hand van de geografische coördinaten welke verkregen worden door de ingebouwde GPS ontvanger. Deze weersinformatie wordt elke 5 minuten vernieuwd. Mocht er een weerswaarschuwing gelden dan zal dit aangegeven worden met een rood knipperend uitroepteken. Druk op het uitroepteken om deze waarschuwing weer te geven. In dat zelfde scherm worden ook gedetecteerde bliksemontladingen weergegeven.
 Voor radioamateurs is er ook een sectie ingericht waar relevante ruimteweersinformatie wordt weergegeven. Ook worden bandomstandigheden voor DX op korte golf en VHF getoond. Deze informatie wordt verkregen van hamqsl.com. De MUF informatie wordt verkregen van meteo.be. Deze gegevens worden respectievelijk elke 30 seconden en elke 20 seconden vernieuwd.
