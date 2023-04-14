@@ -1,4 +1,10 @@
+// Weerstation
+// (c) 2023 PE5PVB Sjef Verhoeven
+//
+// Getest met board manager v2.0.7
+//
 #include <WiFiClient.h>
+#include <WiFiClientSecure.h>
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
@@ -15,7 +21,7 @@
 #include "AS3935-Lightning-sensor-SOLDERED.h"
 #include "DHT.h"                    // https://github.com/adafruit/DHT-sensor-library
 #include <EasyNextionLibrary.h>     // https://github.com/Seithan/EasyNextionLibrary
-#include <Timezone.h>    // https://github.com/JChristensen/Timezone
+#include <Timezone.h>               // https://github.com/JChristensen/Timezone
 #include <NTPClient.h>              // https://github.com/arduino-libraries/NTPClient
 
 #define SOFTWAREVERSION 10
@@ -25,7 +31,7 @@ Timezone CE(CEST, CET);
 WiFiConnect wc;
 WiFiClient jsonclient;
 WiFiClient mufclient;
-WiFiClient propclient;
+WiFiClientSecure propclient;
 TinyGPSPlus gps;
 TextFinder finder(propclient);
 EasyNex Display(Serial2);
@@ -368,10 +374,7 @@ void loop(void) {
       time_6 += 600000;
       beeper_lightning = false;
       if (weeralarm == false) {
-        Display.writeNum("tm0.en", 0);
-        delay(500);
-        Display.writeNum("b_alarm.pic", 67);
-        Display.writeNum("vis b_alarm", 1);
+        trigger1();
       }
     }
 
@@ -380,7 +383,7 @@ void loop(void) {
       time_5 += 300000;
     }
 
-    if (weeralarm == 1 || alarmswitch == 0 && weeralarm == 0) {
+    if ((weeralarm == 1 || alarmswitch == 0) && weeralarm == 0) {
       if (digitalRead(intPin) == HIGH) {
         byte x = lightning.readInterruptReg();
         if (x == 0x08) {
@@ -825,30 +828,34 @@ void getPropagation() {
   uint16_t pos;
   String t;
 
-  propclient.setTimeout(2000);
-  if (!propclient.connect("hamqsl.com", 80)) {
-    return;
-  }
+    propclient.setInsecure();
+    propclient.setTimeout(2000);
+    if (!propclient.connect("hamqsl.com", 443)) {
+      return;
+    }
+    propclient.println("GET https://hamqsl.com/solarxml.php HTTP/1.0");
+    propclient.println("Host: hamqsl.com");
+    propclient.println("Connection: close");
+    propclient.println();
 
-  propclient.println("GET /solarxml.php HTTP/1.1");
-  propclient.println("Host: hamqsl.com");
-  propclient.println("Connection: close");
-  if (propclient.println() == 0) {
-    propclient.stop();
-    return;
-  }
+    if (propclient.println() == 0) {
+      propclient.stop();
+      return;
+    }
 
-  char status[32] = {0};
-  propclient.readBytesUntil('\r', status, sizeof(status));
-  if (strcmp(status + 9, "200 OK") != 0) {
-    propclient.stop();
-    return;
-  }
-  char endOfHeaders[] = "\r\n\r\n";
-  if (!propclient.find(endOfHeaders)) {
-    propclient.stop();
-    return;
-  }
+    char status[32] = {0};
+    propclient.readBytesUntil('\r', status, sizeof(status));
+    if (strcmp(status + 9, "200 OK") != 0) {
+      propclient.stop();
+      return;
+    }
+
+    char endOfHeaders[] = "\r\n\r\n";
+    if (!propclient.find(endOfHeaders)) {
+      propclient.stop();
+      return;
+    }
+
 
   for (uint16_t i = 0; i < 2000; i++)
   {
