@@ -828,33 +828,33 @@ void getPropagation() {
   uint16_t pos;
   String t;
 
-    propclient.setInsecure();
-    propclient.setTimeout(2000);
-    if (!propclient.connect("hamqsl.com", 443)) {
-      return;
-    }
-    propclient.println("GET https://hamqsl.com/solarxml.php HTTP/1.0");
-    propclient.println("Host: hamqsl.com");
-    propclient.println("Connection: close");
-    propclient.println();
+  propclient.setInsecure();
+  propclient.setTimeout(2000);
+  if (!propclient.connect("hamqsl.com", 443)) {
+    return;
+  }
+  propclient.println("GET https://hamqsl.com/solarxml.php HTTP/1.0");
+  propclient.println("Host: hamqsl.com");
+  propclient.println("Connection: close");
+  propclient.println();
 
-    if (propclient.println() == 0) {
-      propclient.stop();
-      return;
-    }
+  if (propclient.println() == 0) {
+    propclient.stop();
+    return;
+  }
 
-    char status[32] = {0};
-    propclient.readBytesUntil('\r', status, sizeof(status));
-    if (strcmp(status + 9, "200 OK") != 0) {
-      propclient.stop();
-      return;
-    }
+  char status[32] = {0};
+  propclient.readBytesUntil('\r', status, sizeof(status));
+  if (strcmp(status + 9, "200 OK") != 0) {
+    propclient.stop();
+    return;
+  }
 
-    char endOfHeaders[] = "\r\n\r\n";
-    if (!propclient.find(endOfHeaders)) {
-      propclient.stop();
-      return;
-    }
+  char endOfHeaders[] = "\r\n\r\n";
+  if (!propclient.find(endOfHeaders)) {
+    propclient.stop();
+    return;
+  }
 
 
   for (uint16_t i = 0; i < 2000; i++)
@@ -1692,35 +1692,21 @@ void FormatTime(Timezone tz) {
   if (weekday(t) == 6) dayname2 = "Zo";
   if (weekday(t) == 7) dayname2 = "Ma";
   String monthname;
-  if (month(t) == 1) monthname = "Jan";
-  if (month(t) == 2) monthname = "Feb";
-  if (month(t) == 3) monthname = "Mrt";
-  if (month(t) == 4) monthname = "Apr";
-  if (month(t) == 5) monthname = "Mei";
-  if (month(t) == 6) monthname = "Jun";
-  if (month(t) == 7) monthname = "Jul";
-  if (month(t) == 8) monthname = "Aug";
-  if (month(t) == 9) monthname = "Sep";
-  if (month(t) == 10) monthname = "Okt";
-  if (month(t) == 11) monthname = "Nov";
-  if (month(t) == 12) monthname = "Dec";
+  if (month(t) == 1) monthname = "jan";
+  if (month(t) == 2) monthname = "feb";
+  if (month(t) == 3) monthname = "mrt";
+  if (month(t) == 4) monthname = "apr";
+  if (month(t) == 5) monthname = "mei";
+  if (month(t) == 6) monthname = "jun";
+  if (month(t) == 7) monthname = "jul";
+  if (month(t) == 8) monthname = "aug";
+  if (month(t) == 9) monthname = "sep";
+  if (month(t) == 10) monthname = "okt";
+  if (month(t) == 11) monthname = "nov";
+  if (month(t) == 12) monthname = "dec";
 
-  String secondadd;
-  String minuteadd;
-  if (second(t) < 10) {
-    secondadd = "0";
-  } else {
-    secondadd = "";
-  }
-
-  if (minute(t) < 10) {
-    minuteadd = "0";
-  } else {
-    minuteadd = "";
-  }
-
-  datetime = String(dayname + " " + String(day(t)) + " " + monthname + " " + String(year(t)) + " " + String(hour(t)) + ":" + minuteadd + String(minute(t)) + ":" + secondadd + String(second(t)));
-  datetimestamp = (String(day(t)) + "/" + String(month(t)) + " " + String(hour(t)) + ":" + minuteadd + String(minute(t)) + " ");
+  datetime = String(dayname + " " + String(day(t)) + " " + monthname + " " + String(year(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "") + String(minute(t)) + ":" + (second(t) < 10 ? "0" : "") + String(second(t)));
+  datetimestamp = (String(day(t)) + "/" + String(month(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "")  + String(minute(t)) + " ");
 
   if (gps.location.isValid() == true || ntp == true)
   {
@@ -1736,6 +1722,6 @@ void FormatTime(Timezone tz) {
       if (display_weather == true) Display.writeStr("d2name.txt", dayname2);
       dayname2old = dayname2;
     }
-    if (gps.location.isValid() == true && display_gps == true) Display.writeStr("utctime.txt", String(gps.time.hour()) + ":" + minuteadd + String(gps.time.minute()) + ":" + secondadd + String(gps.time.second()));
+    if (gps.location.isValid() == true && display_gps == true) Display.writeStr("utctime.txt", String(gps.time.hour()) + ":" + (gps.time.minute() < 10 ? "0" : "") + String(gps.time.minute()) + ":" + (gps.time.second() < 10 ? "0" : "") + String(gps.time.second()));
   }
 }
