@@ -110,29 +110,54 @@ De aansluitingen van de kleuren van de draden van display en DFRobot modules sta
 Hieronder een overzicht van de benodigde componenten met componentennummer een aantal.
 
 5x	C1, C2, C3, C5, C7		100n condensator (5mm pitch)
+
 1x	C4				            100µF elektrolytische condensator (6.5mm diameter)
+
 1x	C6				            10µF elektrolytische condensator (5.5mm diameter)
+
 3x	R1, R2, R4			      10kΩ 0.25W weerstand
+
 2x	R6, R7				        5.1kΩ 0.25W weerstand
+
 1x	R3				            1kΩ 0.25W weerstand
+
 1x	R5				            470Ω 0.25W weerstand
+
 1x	D1				            3mm LED
+
 1x	U1				            ESP32-WROOM-32UE
+
 1x	U2				            DHT22 module
+
 1x	U3				            LM1117T-3.3
+
 1x	F1				            Zelfherstellende zekering PPTC Polyfuse 500mA (5mm pitch)
+
 1x	SW1				            PCB Drukknop
+
 1x	BZ1				            Actieve buzzer
+
 1x	Q1				            BC547 transistor
+
 1x	J1				            Pinheader, 3-pins (2.54mm pitch)
+
 1x	J2				            ATGM336H GPS Module
+
 1x	J3				            Pinheader, 4-pins (2.54mm pitch)
+
 1x	J4				            DFRobot Gravity SGP40 module
+
 1x	J5				            DFRobot Gravity Bliksem Afstandssensor
+
 1x	J6				            USB-C 2.0 Female naar DIP Adapter
+
 1x					              WiFi 2.4GHz antenne met uFL connector
+
 1x					              Nextion Discovery 3.5” display
+
 5x					              Bout M3 10mm
+
 5x					              Moer M3
+
 
 Alle bovenstaande onderdelen zijn verkrijgbaar bij Tinytronics.nl
