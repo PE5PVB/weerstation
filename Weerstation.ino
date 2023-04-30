@@ -374,6 +374,7 @@ void loop(void) {
       time_6 += 600000;
       beeper_lightning = false;
       if (weeralarm == false) {
+        currenttrigger = 0;
         trigger1();
       }
     }
@@ -383,7 +384,7 @@ void loop(void) {
       time_5 += 300000;
     }
 
-    if ((weeralarm == 1 || alarmswitch == 0) && weeralarm == 0) {
+    if (weeralarm == 1 || alarmswitch == 0) {
       if (digitalRead(intPin) == HIGH) {
         byte x = lightning.readInterruptReg();
         if (x == 0x08) {
@@ -1407,8 +1408,8 @@ void showData() {
     Serial.println(weeralarm);
     if (display_weather == true) {
       if (weeralarm == true) {
-        Display.writeNum("b_alarm.pic", 49);
-        Display.writeNum("tm0.en", 1);
+        currenttrigger = 0;
+        trigger1();
         if (beeper_alarm == false) {
           buzzer(1);
           beeper_alarm = true;
