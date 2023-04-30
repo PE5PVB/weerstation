@@ -105,7 +105,12 @@ Plaats nu vervolgens de overige onderdelen, begin bij laag (weerstanden) en eind
 
 De bijgeleverde aansluitkabels van de DFRobot modules zijn vrij lang. Deze kun je naar eigen inzicht in te korten.
 De aansluitingen van de kleuren van de draden van display en DFRobot modules staan aangegeven met de eerste letter van de kleur. (bv. R = Rood, B = Blauw, Z = zwart etc). Bij de bliksemdetector moet AUX worden aangesloten op de IRQ pin van het detector board. Dit is een losse pen! Bij de LED staat de L voor het lange pootje van de LED.
- 
+
+## Programmeren
+
+Gebruik bij voorkeur de pre-compiled version van mijn github pagina. Start het programma FLASH.BAT en volg de instructies.
+Indien je toch vanuit Arduino IDE wilt programmeren, controleer dan of alle benodigde libraries zijn geinstalleerd.
+
 ## Onderdelenlijst
 Hieronder een overzicht van de benodigde componenten met componentennummer een aantal.
 
@@ -161,3 +166,18 @@ Hieronder een overzicht van de benodigde componenten met componentennummer een a
 
 
 Alle bovenstaande onderdelen zijn verkrijgbaar bij Tinytronics.nl
+
+## Trouble shooting
+
+### Start niet goed op.
+Mogelijk is de netadapter niet compatible. Ik heb dit project getest met een Raspberry Pi 4 voeding. Plaats eerst de USB kabel, daarna pas de adapter in de wandcontactdoos.
+
+### Blijft tijdens het opstarten hangen op Bliksemdetector controle
+Controleer of de AUX pin verbonden is met de IRQ pin van het detector board.
+
+### Geeft geen actueel weerbericht, temperatuur blijft op 0 graden staan
+Controleer API code op type fouten. Het is een hexadecimaal getal, dus gebruikte karakters zijn 0-9 en a-f.
+
+### GPS module werkt niet
+Controleer of de antenne connector niet tegen het batterijtje aan komt.
+
