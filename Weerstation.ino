@@ -1408,17 +1408,15 @@ void showData() {
     Serial.println(weeralarm);
     if (display_weather == true) {
       if (weeralarm == true) {
-        currenttrigger = 0;
-        trigger1();
+        Display.writeNum("b_alarm.pic", 49);
+        Display.writeNum("tm0.en", 1);
         if (beeper_alarm == false) {
           buzzer(1);
           beeper_alarm = true;
         }
       } else {
-        Display.writeNum("tm0.en", 0);
-        delay(500);
-        Display.writeNum("b_alarm.pic", 67);
-        Display.writeNum("vis b_alarm", 1);
+        currenttrigger = 0;
+        trigger1();
         beeper_alarm = false;
       }
     }
