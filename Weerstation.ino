@@ -397,11 +397,6 @@ void loop(void) {
         }
 
         if (x == 0x08) {
-          if (beeper_lightning == false) {
-            buzzer(0);
-            beeper_lightning = true;
-            Display.writeNum("b_alarm.pic", 49);
-          }
           unsigned int lightningDistKm = lightning.distanceToStorm();
           Serial.println("Lightning occurs!");
           Serial.print("Distance: ");
@@ -413,19 +408,26 @@ void loop(void) {
           Serial.print(lightningEnergyVal);
           Serial.println("");
 
-          lightningcount++;
-          if (lightningcount > 6) {
-            lightningtext[0] = lightningtext[1];
-            lightningtext[1] = lightningtext[2];
-            lightningtext[2] = lightningtext[3];
-            lightningtext[3] = lightningtext[4];
-            lightningtext[4] = lightningtext[5];
-            lightningtext[5] = (datetimestamp + " Afstand: " + String(lightningDistKm) + "km");
-            lightningcount = 7;
-          } else {
-            lightningtext[lightningcount] = (datetimestamp + " Afstand: " + String(lightningDistKm) + "km");
+          if (lightningDistKm > 1) {
+            lightningcount++;
+            if (beeper_lightning == false) {
+              buzzer(0);
+              beeper_lightning = true;
+              Display.writeNum("b_alarm.pic", 49);
+            }
+            if (lightningcount > 6) {
+              lightningtext[0] = lightningtext[1];
+              lightningtext[1] = lightningtext[2];
+              lightningtext[2] = lightningtext[3];
+              lightningtext[3] = lightningtext[4];
+              lightningtext[4] = lightningtext[5];
+              lightningtext[5] = (datetimestamp + " Afstand: " + String(lightningDistKm) + "km");
+              lightningcount = 7;
+            } else {
+              lightningtext[lightningcount] = (datetimestamp + " Afstand: " + String(lightningDistKm) + "km");
+            }
+            lightningtextmerge = (lightningtext[0] + "\\r" + lightningtext[1] + "\\r" + lightningtext[2] + "\\r" + lightningtext[3] + "\\r" + lightningtext[4] + "\\r" + lightningtext[5] + "\\r");
           }
-          lightningtextmerge = (lightningtext[0] + "\\r" + lightningtext[1] + "\\r" + lightningtext[2] + "\\r" + lightningtext[3] + "\\r" + lightningtext[4] + "\\r" + lightningtext[5] + "\\r");
         }
       }
     }
@@ -446,7 +448,6 @@ void setLightning() {
   delay(50);
   lightning.lightningThreshold(1);
   delay(50);
-  //  lightning.resetSettings();
   Serial.println("Lightning watchdog threshold set to: " + String(lightning.readWatchdogThreshold()));
   Serial.println("Lightning spike rejection set to: " + String(lightning.readSpikeRejection()));
   Serial.println("Lightning threshold set to: " + String(lightning.readLightningThreshold()));
