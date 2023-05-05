@@ -18,11 +18,11 @@
 #include <TextFinder.h>
 #include <WiFiConnectParam.h>
 #include <DFRobot_SGP40.h>
-#include "AS3935-Lightning-sensor-SOLDERED.h"
-#include "DHT.h"                    // https://github.com/adafruit/DHT-sensor-library
-#include <EasyNextionLibrary.h>     // https://github.com/Seithan/EasyNextionLibrary
-#include <Timezone.h>               // https://github.com/JChristensen/Timezone
-#include <NTPClient.h>              // https://github.com/arduino-libraries/NTPClient
+#include "AS3935-Lightning-sensor-SOLDERED.h" // https://github.com/SolderedElectronics/Soldered-AS3935-Lightning-detect-Arduino-Library
+#include "DHT.h"                              // https://github.com/adafruit/DHT-sensor-library
+#include <EasyNextionLibrary.h>               // https://github.com/Seithan/EasyNextionLibrary
+#include <Timezone.h>                         // https://github.com/JChristensen/Timezone
+#include <NTPClient.h>                        // https://github.com/arduino-libraries/NTPClient
 
 #define SOFTWAREVERSION 10
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};
@@ -320,6 +320,7 @@ void setup(void) {
     Display.writeStr("status.txt", "OK!");
   }
   delay(1000);
+  Wire.begin();
   Display.writeStr("info.txt", "Lightning sensor");
   Display.writeStr("status.txt", " ");
   if (!lightning.begin()) {
@@ -374,8 +375,7 @@ void loop(void) {
       time_6 += 600000;
       beeper_lightning = false;
       if (weeralarm == false) {
-        currenttrigger = 0;
-        trigger1();
+        Display.writeNum("b_alarm.pic", 67);
       }
     }
 
@@ -387,12 +387,20 @@ void loop(void) {
     if (weeralarm == 1 || alarmswitch == 0) {
       if (digitalRead(intPin) == HIGH) {
         byte x = lightning.readInterruptReg();
+
+        if (x == 0x01) {
+          Serial.println("Noise detected!");
+        }
+
+        if (x == 0x04) {
+          Serial.println("Disturber detected!");
+        }
+
         if (x == 0x08) {
           if (beeper_lightning == false) {
             buzzer(0);
             beeper_lightning = true;
             Display.writeNum("b_alarm.pic", 49);
-            Display.writeNum("tm0.en", 1);
           }
           unsigned int lightningDistKm = lightning.distanceToStorm();
           Serial.println("Lightning occurs!");
@@ -427,11 +435,22 @@ void loop(void) {
 
 void setLightning() {
   lightning.maskDisturber(true);
+  delay(50);
   if (indoor == true) lightning.setIndoorOutdoor(0x12); else lightning.setIndoorOutdoor(0xE);
+  delay(50);
   lightning.setNoiseLevel(2);
+  delay(50);
   lightning.watchdogThreshold(threshold);
+  delay(50);
   lightning.spikeRejection(spike);
+  delay(50);
   lightning.lightningThreshold(1);
+  delay(50);
+  //  lightning.resetSettings();
+  Serial.println("Lightning watchdog threshold set to: " + String(lightning.readWatchdogThreshold()));
+  Serial.println("Lightning spike rejection set to: " + String(lightning.readSpikeRejection()));
+  Serial.println("Lightning threshold set to: " + String(lightning.readLightningThreshold()));
+  Serial.println("Lightning noise level set to: " + String(lightning.readNoiseLevel()));
 }
 
 void trigger1() {   // Weather view
@@ -530,7 +549,7 @@ void trigger5() {   // Config1 afsluiten
     EEPROM.writeByte(35, threshold);
     EEPROM.writeByte(38, spike);
     EEPROM.commit();
-    setLightning();
+
     Display.writeStr("page 4");
     delay(100);
     ResetScreenData();
@@ -645,6 +664,7 @@ void trigger11() {  // Config 3 afsluiten
     EEPROM.commit();
     currenttrigger = 11;
     menu = false;
+    setLightning();
     trigger1();
   }
 }
@@ -1409,14 +1429,12 @@ void showData() {
     if (display_weather == true) {
       if (weeralarm == true) {
         Display.writeNum("b_alarm.pic", 49);
-        Display.writeNum("tm0.en", 1);
         if (beeper_alarm == false) {
           buzzer(1);
           beeper_alarm = true;
         }
       } else {
-        currenttrigger = 0;
-        trigger1();
+        Display.writeNum("b_alarm.pic", 67);
         beeper_alarm = false;
       }
     }
