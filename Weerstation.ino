@@ -413,6 +413,7 @@ void loop(void) {
             if (beeper_lightning == false) {
               buzzer(0);
               beeper_lightning = true;
+              time_6 += 600000;
               Display.writeNum("b_alarm.pic", 49);
             }
             if (lightningcount > 6) {
@@ -446,7 +447,7 @@ void setLightning() {
   delay(50);
   lightning.spikeRejection(spike);
   delay(50);
-  lightning.lightningThreshold(1);
+  lightning.lightningThreshold(5);
   delay(50);
   Serial.println("Lightning watchdog threshold set to: " + String(lightning.readWatchdogThreshold()));
   Serial.println("Lightning spike rejection set to: " + String(lightning.readSpikeRejection()));
