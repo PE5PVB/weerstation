@@ -15,7 +15,6 @@
 #include <SoftwareSerial.h>
 #include <maidenhead.h>
 #include <EEPROM.h>
-#include <TextFinder.h>
 #include <WiFiConnectParam.h>
 #include <DFRobot_SGP40.h>
 #include "AS3935-Lightning-sensor-SOLDERED.h" // https://github.com/SolderedElectronics/Soldered-AS3935-Lightning-detect-Arduino-Library
@@ -23,6 +22,7 @@
 #include <EasyNextionLibrary.h>               // https://github.com/Seithan/EasyNextionLibrary
 #include <Timezone.h>                         // https://github.com/JChristensen/Timezone
 #include <NTPClient.h>                        // https://github.com/arduino-libraries/NTPClient
+#include <TextFinder.h>                       // https://github.com/tardate/TextFinder
 
 #define SOFTWAREVERSION 10
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};
