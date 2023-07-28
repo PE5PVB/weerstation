@@ -338,11 +338,12 @@ void loop(void) {
 
     if (millis() >= time_4 + 5000) {
       time_4 += 5000;
-      if (!isWiFiConnected() || !isInternetAvailable()) {
-        if (cycle != 5) {
+      if (WiFi.status() != WL_CONNECTED) {
+        if (cycle > 3) {
           Serial.println("WiFi connection lost. Reconnecting...");
+          wifistatus = false;
           Display.writeStr("page 6"); delay(25);
-          Display.writeStr("warning.txt", "Internet verbinding verbroken!"); delay(25);
+          Display.writeStr("warning.txt", "Netwerk verbinding verbroken!"); delay(25);
           while (wifistatus == false) Display.NextionListen();
           cycle = 0;
         }
@@ -2001,21 +2002,6 @@ void knmiweeralarm() {
     Serial.println("Weeralarm: Failed to connect to server");
   }
   http.stop();
-}
-
-bool isWiFiConnected() {
-  return WiFi.status() == WL_CONNECTED;
-}
-
-bool isInternetAvailable() {
-  WiFiClient client;
-  if (!client.connect("www.google.com", 80)) {
-    Serial.println("Internet verbinding verbroken!");
-    return false;
-  }
-
-  client.stop();
-  return true;
 }
 
 void buienradar() {
