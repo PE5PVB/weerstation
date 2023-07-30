@@ -49,7 +49,6 @@ byte autodim;
 byte autoloc;
 byte contrast = 100;
 byte currenttrigger;
-byte cycle;
 byte d1image;
 byte d1imageold;
 byte d1windk;
@@ -152,10 +151,10 @@ String kindexold;
 String latdegree;
 String latdegreeold;
 String latitudeold;
-String lightningtext[6];
+String lightningtext[7];
 String lightningtextmerge = "Geen meldingen";
 String lightningtextmergeold;
-String lightningtextold[6];
+String lightningtextold[7];
 String longitudeold;
 String magneticfield;
 String magneticfieldold;
@@ -235,11 +234,6 @@ void setup(void) {
   buzzer(0);
   Display.writeStr("page 0");
   Display.writeNum("tm0.en", 0);
-  if (Display.readNumber("software") != SOFTWAREVERSION) {
-    Display.writeStr("info.txt", "Update display naar");
-    Display.writeStr("status.txt", "v1.1");
-    for (;;);
-  }
   Display.writeStr("version.txt", ("v " + String(swver / 10) + "." + String(swver % 10)));
   Display.writeStr("info.txt", "Verbinden met WiFi...");
   Serial.print("WiFi verbinding opbouwen.....");
@@ -339,15 +333,11 @@ void loop(void) {
     if (millis() >= time_4 + 5000) {
       time_4 += 5000;
       if (WiFi.status() != WL_CONNECTED) {
-        if (cycle > 3) {
-          Serial.println("WiFi connection lost. Reconnecting...");
-          wifistatus = false;
-          Display.writeStr("page 6");
-          Display.writeStr("warning.txt", "Netwerk verbinding verbroken!");
-          while (wifistatus == false) Display.NextionListen();
-          cycle = 0;
+        Serial.println("WiFi connection lost. Reconnecting...");
+        wifistatus = false;
+        while (wifistatus == false) {
+          if (wc.autoConnect()) wifistatus = true;
         }
-        cycle++;
       }
       getIndoor();
       showData();
