@@ -67,6 +67,7 @@ byte ntp;
 byte spike;
 byte swver;
 byte threshold;
+long rssiold;
 byte winds;
 byte windsold;
 byte zicht;
@@ -299,6 +300,7 @@ void setup(void) {
   Display.writeStr("status.txt", " ");
   getWeather();
   getIndoor();
+  showRSSI();
   delay(1000);
   NTPtimeClient.begin();
   Display.writeNum("setkmu", kmu);
@@ -312,6 +314,7 @@ void loop(void) {
   digitalWrite(2, HIGH);
   Display.NextionListen();
   getGPS();
+
   if (menu == false) {
     if (millis() >= time_1 + 30000) {
       time_1 += 30000;
@@ -332,11 +335,27 @@ void loop(void) {
 
     if (millis() >= time_4 + 5000) {
       time_4 += 5000;
-      if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi connection lost. Reconnecting...");
-        wifistatus = false;
-        while (wifistatus == false) {
-          if (wc.autoConnect()) wifistatus = true;
+      showRSSI();
+      if (display_weather == true) {
+        if (WiFi.status() != WL_CONNECTED) {
+          Serial.println("WiFi connection lost. Reconnecting...");
+          wifistatus = false;
+          Display.writeStr("tsw b_radio,0");
+          Display.writeStr("tsw m0,0");
+          Display.writeStr("tsw m1,0");
+          Display.writeStr("tsw m2,0");
+          Display.writeStr("tsw m3,0");
+          Display.writeStr("tsw m4,0");
+          Display.writeNum("rssi", 0);
+          while (wifistatus == false) {
+            if (wc.autoConnect()) wifistatus = true;
+          }
+          Display.writeStr("tsw b_radio,1");
+          Display.writeStr("tsw m0,1");
+          Display.writeStr("tsw m1,1");
+          Display.writeStr("tsw m2,1");
+          Display.writeStr("tsw m3,1");
+          Display.writeStr("tsw m4,1");
         }
       }
       getIndoor();
@@ -412,15 +431,10 @@ void loop(void) {
 
 void setLightning() {
   lightning.maskDisturber(true);
-
   if (indoor == true) lightning.setIndoorOutdoor(0x12); else lightning.setIndoorOutdoor(0xE);
-
   lightning.setNoiseLevel(2);
-
   lightning.watchdogThreshold(threshold);
-
   lightning.spikeRejection(spike);
-
   lightning.lightningThreshold(5);
 
   Serial.println("Lightning watchdog threshold set to: " + String(lightning.readWatchdogThreshold()));
@@ -790,11 +804,22 @@ void ResetScreenData() {
   br_tijdold = " ";
 }
 
-String ParseText(String p_buff, String from, String to) {
-  String output;
-  output = p_buff.substring(p_buff.indexOf(from) + from.length(), p_buff.indexOf(to));
-  if (output.indexOf("<solardata>") > 0) output = " ";
-  return output;
+void showRSSI()
+{
+  if (WiFi.RSSI() != rssiold) {
+    rssiold = WiFi.RSSI();
+    if (WiFi.RSSI() == 0) {
+      Display.writeNum("rssi", 0);
+    } else if (WiFi.RSSI() > -50 && WiFi.RSSI() < 0) {
+      Display.writeNum("rssi", 4);
+    } else if (WiFi.RSSI() > -60) {
+      Display.writeNum("rssi", 3);
+    } else if (WiFi.RSSI() > -70) {
+      Display.writeNum("rssi", 2);
+    } else if (WiFi.RSSI() < -70) {
+      Display.writeNum("rssi", 1);
+    }
+  }
 }
 
 void setWifi() {
@@ -1649,7 +1674,7 @@ void showData() {
   }
 
   if (String(br_tijd[0]) != br_tijdold) {
-    if (display_weather == true) Display.writeStr("br_mmu.txt", (br_mmpu[0] > 0 ? String(float(32 * log10(br_mmpu[0]) + 109), 1) : "0.0") + "mm/u");
+    if (display_weather == true) Display.writeStr("br_mmu.txt", (br_mmpu[0] > 0 ? String(float(pow(10, (float(br_mmpu[0]) - 109) / 32)), 1) : "0.0") + "mm/u");
 
     int max_value = br_mmpu[0];
     for (int i = 1; i < 24; i++) {
@@ -1855,8 +1880,8 @@ void Provinciecall() {
   HTTPClient https;
   http.setInsecure();
   http.setTimeout(2000);
-  if (http.connect("geodata.nationaalgeoregister.nl", 443)) {
-    https.begin(http, "geodata.nationaalgeoregister.nl", 443, "/locatieserver/v3/free?q=" + plaats + "&lat=" + String(latitude, 2) + "&lon=" + String(longitude, 2) + "&rows=1");
+  if (http.connect("api.pdok.nl", 443)) {
+    https.begin(http, "api.pdok.nl", 443, "/bzk/locatieserver/search/v3_1/free?q=" + plaats + "&lat=" + String(latitude, 2) + "&lon=" + String(longitude, 2) + "&rows=1");
     int httpCode = https.GET();
     if (httpCode == HTTP_CODE_OK) {
       DynamicJsonDocument jsonDocument(JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(13) + 1024);
