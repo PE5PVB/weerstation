@@ -1821,7 +1821,7 @@ void FormatTime(Timezone tz) {
   if (month(t) == 11) monthname = "nov";
   if (month(t) == 12) monthname = "dec";
 
-  datetime = String(dayname + " " + String(day(t)) + " " + monthname + " " + String(year(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "") + String(minute(t)) + ":" + (second(t) < 10 ? "0" : "") + String(second(t)));
+  datetime = String(dayname + " " + String(day(t)) + " " + monthname + " " + String(year(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "") + String(minute(t)) + ":" + (second(t) < 10 ? "0" : "") + String(second(t)) + " ");
   datetimestamp = (String(day(t)) + "/" + String(month(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "")  + String(minute(t)) + " ");
 
   if (gps.location.isValid() == true || ntp == true)
