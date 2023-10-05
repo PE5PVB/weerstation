@@ -17,7 +17,7 @@
 #include <Timezone.h>                         // https://github.com/JChristensen/Timezone
 #include <NTPClient.h>                        // https://github.com/arduino-libraries/NTPClient
 
-#define SOFTWAREVERSION 11
+#define SOFTWAREVERSION 12
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};
 TimeChangeRule CET = {"CET ", Last, Sun, Oct, 3, 60};
 Timezone CE(CEST, CET);
@@ -61,11 +61,12 @@ byte image;
 byte imageold;
 byte indoor;
 int indooroffset;
+byte dauw;
+byte dauwold;
 byte lv;
 byte lvold;
 byte ntp;
 byte spike;
-byte swver;
 byte threshold;
 long rssiold;
 byte winds;
@@ -214,8 +215,7 @@ void setup(void) {
   Display.begin(115200);
   Serial.begin(115200);
   EEPROM.begin(47);
-  swver = EEPROM.readByte(41);
-  if (swver != SOFTWAREVERSION) defaults();
+  if (EEPROM.readByte(41) != 11) defaults();
   latitude = EEPROM.readDouble(9);
   longitude = EEPROM.readDouble(1);
   key = EEPROM.readString(17);
@@ -235,7 +235,7 @@ void setup(void) {
   buzzer(0);
   Display.writeStr("page 0");
   Display.writeNum("tm0.en", 0);
-  Display.writeStr("version.txt", ("v " + String(swver / 10) + "." + String(swver % 10)));
+  Display.writeStr("version.txt", ("v " + String(SOFTWAREVERSION / 10) + "." + String(SOFTWAREVERSION % 10)));
   Display.writeStr("info.txt", "Verbinden met WiFi...");
   Serial.print("WiFi verbinding opbouwen.....");
   if (wc.autoConnect()) {
@@ -452,9 +452,9 @@ void trigger1() {   // Weather view
     display_gps = false;
     display_radio = false;
     display_alarm = false;
-    Display.writeStr("page 1");
     if (radio == 0) Display.writeNum("radiobutton", 0);
     if (radio == 1) Display.writeNum("radiobutton", 1);
+    Display.writeStr("page 1");
     showData();
     knmiweeralarm();
     currenttrigger = 1;
@@ -774,6 +774,7 @@ void ResetScreenData() {
   tempold = 0;
   samenvold = " ";
   lvold = 0;
+  dauwold = 0;
   windrold = " ";
   windsold = 0;
   luchtdold = 0;
@@ -1044,6 +1045,7 @@ void getWeather() {
       temp = weer["liveweer"][0]["temp"].as<float>() * 10;
       samenv = weer["liveweer"][0]["samenv"].as<String>();
       lv = weer["liveweer"][0]["lv"].as<byte>();
+      dauw = weer["liveweer"][0]["dauwp"].as<byte>();
       windr = weer["liveweer"][0]["windr"].as<String>();
       winds = weer["liveweer"][0]["winds"].as<byte>();
       windkmh = weer["liveweer"][0]["windkmh"].as<float>() * 10;
@@ -1429,6 +1431,12 @@ void showData() {
     Serial.println(lv);
     if (display_weather == true) Display.writeNum("luchtv.val", lv);
     lvold = lv;
+  }
+  if (dauw != dauwold) {
+    Serial.print("Dauwpunt                : ");
+    Serial.println(dauw);
+    if (display_weather == true) Display.writeNum("dauwp.val", dauw);
+    dauwold = dauw;
   }
   if (zonop != zonopold) {
     Serial.print("Zon op                  : ");
@@ -1869,7 +1877,7 @@ void defaults() {
   EEPROM.writeByte(38, 2);
   EEPROM.writeByte(39, 1);
   EEPROM.writeByte(40, 0);
-  EEPROM.writeByte(41, SOFTWAREVERSION);
+  EEPROM.writeByte(41, 11);
   EEPROM.writeInt(42, 0);
   EEPROM.commit();
   trigger7();
