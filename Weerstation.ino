@@ -17,7 +17,7 @@
 #include <Timezone.h>                         // https://github.com/JChristensen/Timezone
 #include <NTPClient.h>                        // https://github.com/arduino-libraries/NTPClient
 
-#define SOFTWAREVERSION 12
+#define SOFTWAREVERSION 13
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};
 TimeChangeRule CET = {"CET ", Last, Sun, Oct, 3, 60};
 Timezone CE(CEST, CET);
@@ -1055,6 +1055,11 @@ void getWeather() {
       verw = weer["liveweer"][0]["verw"].as<String>();
       zonop = weer["liveweer"][0]["sup"].as<String>();
       zononder = weer["liveweer"][0]["sunder"].as<String>();
+      alarmtxt = weer["liveweer"][0]["alarmtxt"].as<String>();
+      if (alarmtxt.length() == 0) {
+        alarmtxt = "Er zijn geen algemene waarschuwingen van kracht";
+      }
+
       if (weer["liveweer"][0]["image"].as<String>() == "zonnig") {
         image = 16;
       } else if (weer["liveweer"][0]["image"].as<String>() == "bliksem") {
@@ -1928,92 +1933,59 @@ void Provinciecall() {
 
 void knmiweeralarm() {
   WiFiClientSecure http;
+  http.setTimeout(2000);
   http.setInsecure();
-  String xmlData;
+  String phpData;
   char client_buffer[128];
   int bytesRead;
 
-  if (http.connect("cdn.knmi.nl", 443)) {
+  if (http.connect("arduino.reshift.nl", 443)) {
     Serial.println("Weeralarm ophalen");
-    http.print("GET /knmi/xml/rss/rss_KNMIwaarschuwingen.xml HTTP/1.1\r\n");
-    http.print("Host: cdn.knmi.nl\r\n");
+    String lowercaseProvincie = "";
+    for (int i = 0; i < provincie.length(); i++) {
+      lowercaseProvincie += char(tolower(provincie.charAt(i)));
+    }
+    http.print("GET /weeralarm.php?regio=" + lowercaseProvincie + " HTTP/1.1\r\n");
+    http.print("Host: arduino.reshift.nl\r\n");
     http.print("Connection: close\r\n");
     http.print("\r\n");
 
     int httpCode = http.connected() ? 200 : 0;
     if (httpCode == 200) {
       char endOfHeaders[] = "\r\n\r\n";
-      if (!http.find(endOfHeaders)) {
-        http.stop();
-        Serial.println("Weeralarm: Failed to find end of headers");
-        return;
-      }
 
       while (http.connected() && (bytesRead = http.readBytes(client_buffer, sizeof(client_buffer))) > 0) {
-        xmlData += String(client_buffer).substring(0, bytesRead);
+        phpData += String(client_buffer).substring(0, bytesRead);
       }
 
-      int itemStart = xmlData.indexOf("<item>");
-      int itemEnd = xmlData.indexOf("</item>", itemStart);
+      int dashPosition = phpData.indexOf("--");
+      if (dashPosition != -1) {
+        String statusValue = phpData.substring(dashPosition + 2);
 
-      while (itemStart != -1 && itemEnd != -1) {
-        String itemBlock = xmlData.substring(itemStart, itemEnd);
-
-        int titleStart = itemBlock.indexOf("<title>");
-        int titleEnd = itemBlock.indexOf("</title>", titleStart);
-        int descriptionStart = itemBlock.indexOf("<description>");
-        int descriptionEnd = itemBlock.indexOf("</description>", descriptionStart);
-
-        if (titleStart != -1 && titleEnd != -1 && descriptionStart != -1 && descriptionEnd != -1) {
-          titleStart += strlen("<title>");
-          descriptionStart += strlen("<description>");
-          if (titleStart < titleEnd && descriptionStart < descriptionEnd) {
-            String title = itemBlock.substring(titleStart, titleEnd);
-            String description = itemBlock.substring(descriptionStart, descriptionEnd);
-
-            if (title.indexOf(provincie) != -1) {
-              Serial.println(title);  // Debug check voor weeralarm provincie
-              int codeStart = description.indexOf("Code ") + strlen("Code ");
-              int codeEnd = description.indexOf(".", codeStart);
-              if (codeStart != -1 && codeEnd != -1) {
-                String code = description.substring(codeStart, codeEnd);
-                int textStart = codeEnd + 2;
-
-                int pTagIndex = description.indexOf("&lt;p&gt;");
-                if (pTagIndex != -1) {
-                  alarmtxt = description.substring(textStart, pTagIndex);
-                } else {
-                  alarmtxt = description.substring(textStart);
-                }
-
-                alarmtxt.replace("lt;br&gt;", "");
-                alarmtxt.replace("lt;p&gt;", "");
-                alarmtxt.replace("&", "");
-                alarmtxt = "Code " + code + ": " + alarmtxt;
-
-                if (code.equals("Groen")) {
-                  if (display_weather == true) Display.writeNum("weercode.pic", 69);
-                  weeralarm = false;
-                } else if (code.equals("Geel")) {
-                  if (display_weather == true) Display.writeNum("weercode.pic", 70);
-                  weeralarm = true;
-                } else if (code.equals("Oranje")) {
-                  if (display_weather == true) Display.writeNum("weercode.pic", 71);
-                  weeralarm = true;
-                } else if (code.equals("Rood")) {
-                  if (display_weather == true) Display.writeNum("weercode.pic", 72);
-                  weeralarm = true;
-                }
-                weercode = code;
-              } else {
-                Serial.println("Weeralarm: Failed to extract code");
-              }
-              break;
-            }
-          }
+        if (statusValue.indexOf("green") != -1) {
+          weercode = "groen";
+          weeralarm = false;
+          if (display_weather == true) Display.writeNum("weercode.pic", 69);
+        } else if (statusValue.indexOf("yellow") != -1) {
+          weercode = "geel";
+          weeralarm = true;
+          if (display_weather == true) Display.writeNum("weercode.pic", 70);
+        } else if (statusValue.indexOf("orange") != -1) {
+          if (display_weather == true) Display.writeNum("weercode.pic", 71);
+          weercode = "oranje";
+          weeralarm = true;
+        } else if (statusValue.indexOf("red") != -1) {
+          if (display_weather == true) Display.writeNum("weercode.pic", 72);
+          weercode = "rood";
+          weeralarm = true;
+        } else {
+          weercode = "Onbekend";
+          weeralarm = false;
         }
-        itemStart = xmlData.indexOf("<item>", itemEnd + 1);
-        itemEnd = xmlData.indexOf("</item>", itemStart);
+
+        Serial.println("Weeralarm kleur: " + weercode);
+      } else {
+        Serial.println("Weeralarm: Unable to find status value in the response");
       }
     } else {
       Serial.println("Weeralarm: Unexpected HTTP code: " + String(httpCode));
@@ -2071,7 +2043,6 @@ void buienradar() {
   } else {
     Serial.println("Buienradar: Failed to establish a connection to the server");
   }
-
   http.stop();
 }
 
