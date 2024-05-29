@@ -1,16 +1,5 @@
-##################################################
-# Syntax Coloring Map For AS3935 Lightning sensor
-##################################################
+SparkFun_AS3935	KEYWORD1
 
-##################################################
-# Datatypes (KEYWORD1)
-##################################################
-
-AS3935 KEYWORD1
-
-##################################################
-# Methods and Functions (KEYWORD2)
-##################################################
 
 begin	KEYWORD2
 beginSPI	KEYWORD2
@@ -39,7 +28,3 @@ readTuneCap	KEYWORD2
 lightningEnergy	KEYWORD2
 resetSettings	KEYWORD2
 calibrateOsc	KEYWORD2
-
-##################################################
-# Constants (LITERAL1)
-##################################################

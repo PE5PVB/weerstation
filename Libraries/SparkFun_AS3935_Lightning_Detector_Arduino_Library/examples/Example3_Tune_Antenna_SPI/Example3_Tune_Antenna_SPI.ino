@@ -1,45 +1,40 @@
-/**
- **************************************************
- *
- * @file        Example3_Tune_Antenna_I2C.ino
- * @brief       This example sketch will walk you through how to tune the resonance frequency
- *              of the antenna using the IC's internal tuning caps. You'll need a logic analyzer, 
- *              oscillscope, or some method of reading a square wave of at least 4kHz but up to 32kHz.
- *              A note on what you can expect from a board fresh from SparkFun.
- *              The resonance frequency of a freshly manufactured SparkFun AS3935 Lightning
- *              Detectorw has been ~496kHz which is less then one percent deviation from
- *              perfect resonance. This falls well within the optimal value of 3.5 percent
- *              suggested in the datasheet on page 35. Again, 3.5 percent is OPTIMAL so try
- *              not to tear your hair out if it's not perfect. 
- *
- *
- *	product: www.solde.red/333097
- *
- * @authors     Elias Santistevan, SparkFun Electronics
- *
- *  Modified by Soldered.com
- ***************************************************/
+/*
+  This example sketch will walk you through how to tune the resonance frequency
+  of the antenna using the IC's internal tuning caps. You'll need a logic analyzer, 
+  oscillscope, or some method of reading a square wave of at least 4kHz but up to 32kHz.
+  A note on what you can expect from a board fresh from SparkFun.
+  The resonance frequency of a freshly manufactured SparkFun AS3935 Lightning
+  Detectorw has been ~496kHz which is less then one percent deviation from
+  perfect resonance. This falls well within the optimal value of 3.5 percent
+  suggested in the datasheet on page 35. Again, 3.5 percent is OPTIMAL so try
+  not to tear your hair out if it's not perfect. 
 
+  By: Elias Santistevan
+  SparkFun Electronics
+  Date: April, 2019
+  License: This code is public domain but you buy me a beer if you use this and we meet someday (Beerware license).
+
+*/
+
+#include <SPI.h>
 #include <Wire.h>
-#include "AS3935-Lightning-sensor-SOLDERED.h"
+#include "SparkFun_AS3935.h"
 
-// 0x03 is default, but the address can also be 0x02, or 0x01.
-// Adjust the address jumpers on the underside of the product. 
-#define AS3935_ADDR 0x03 
 #define ANTFREQ 3
 
-AS3935 lightning(AS3935_ADDR);
+// Chip select for SPI on pin ten.
+int spiCS = 10; 
 
-// Interrupt pin for lightning detection
-const int intPin = 4;
+// SPI
+SparkFun_AS3935 lightning;
 
 void setup()
 {
   Serial.begin(115200); 
   Serial.println("AS3935 Franklin Lightning Detector"); 
 
-  Wire.begin(); // Begin Wire before lightning sensor. 
-  if( !lightning.begin() ){ // Initialize the sensor. 
+  SPI.begin(); // For SPI
+  if( !lightning.beginSPI(spiCS) ) { 
     Serial.println ("Lightning Detector did not start up, freezing!"); 
     while(1); 
   }
@@ -87,7 +82,6 @@ void setup()
 
   //lightning.displayOscillator(false, ANTFREQ); 
 
-
   // You can now calibrate the internal oscillators of the IC - given that the
   // resonance frequency of the antenna is tightly trimmed. They are calibrated
   // off of the antenna frequency. 
@@ -100,3 +94,5 @@ void setup()
 
 void loop() {
 }
+
+

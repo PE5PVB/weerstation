@@ -11,13 +11,15 @@
 #include <EEPROM.h>
 #include <WiFiConnectParam.h>
 #include <DFRobot_SGP40.h>
-#include "AS3935-Lightning-sensor-SOLDERED.h" // https://github.com/SolderedElectronics/Soldered-AS3935-Lightning-detect-Arduino-Library
+#include "SparkFun_AS3935.h"                  // https://github.com/sparkfun/SparkFun_AS3935_Lightning_Detector_Arduino_Library
 #include "DHT.h"                              // https://github.com/adafruit/DHT-sensor-library
 #include <EasyNextionLibrary.h>               // https://github.com/Seithan/EasyNextionLibrary
 #include <Timezone.h>                         // https://github.com/JChristensen/Timezone
 #include <NTPClient.h>                        // https://github.com/arduino-libraries/NTPClient
 
-#define SOFTWAREVERSION 13
+#define MAX_FLOAT_VALUE 3.402823466e+38F
+#define SOFTWAREVERSION 14
+
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};
 TimeChangeRule CET = {"CET ", Last, Sun, Oct, 3, 60};
 Timezone CE(CEST, CET);
@@ -29,7 +31,7 @@ SoftwareSerial ss(12, 13);
 WiFiUDP ntpUDP;
 NTPClient NTPtimeClient(ntpUDP, "europe.pool.ntp.org");
 DFRobot_SGP40 mySgp40;
-AS3935 lightning(0x03);
+SparkFun_AS3935 lightning(0x03);
 
 bool beeper;
 bool beeper_alarm = false;
@@ -290,7 +292,7 @@ void setup(void) {
   } else {
     Serial.println("Lightning sensor OK");
     Display.writeStr("status.txt", "OK!");
-    lightning.tuneAntenna();
+    tuneAntenna();
     setLightning();
   }
   delay(1000);
@@ -2063,4 +2065,84 @@ int splitString(const String& input, char delimiter, String* output, int maxItem
   }
 
   return itemCount;
+}
+
+bool tuneAntenna() {
+  const float targetFrequency = 500.0; // Target frequency in kHz
+  const int num_samples = 20;
+  const int timeout_us = 10000; // Increase timeout for stability
+
+  lightning.changeDivRatio(16); // Set divider ratio
+
+  lightning.displayOscillator(true, 3);
+
+  float closestFrequency = MAX_FLOAT_VALUE; // Initialize with a large value
+  int best_cap_index = 0;
+
+  for (int i = 0; i < 16; i++) {
+    lightning.tuneCap(8 * i); // Set current index to capacitor value
+    delay(2);       // Time to stabilize frequency
+
+    float total_time = 0;
+    for (int j = 0; j < num_samples; j++) {
+      float sample_time = measureTime(timeout_us);
+      if (sample_time == 0) {
+        return false; // Interrupt pin not connected
+      }
+      total_time += sample_time;
+    }
+
+    // Calculate the measured frequency
+    float measuredFrequency = 1 / (total_time / num_samples) * 16 * 1000;
+
+    // Calculate the difference from the target frequency
+    float diff = abs(targetFrequency - measuredFrequency);
+
+    // Check if this capacitor value yields a closer frequency
+    if (diff < closestFrequency) {
+      closestFrequency = diff;
+      best_cap_index = i;
+    }
+  }
+
+  // Select the best capacitor value
+  lightning.tuneCap(8 * best_cap_index);
+
+  Serial.println("Sensor is gecalibreerd en ingesteld op de beste interne condensator!");
+  Serial.print("Condensatorwaarde na calibratie: ");
+  Serial.print(lightning.readTuneCap());
+  Serial.println(" pF.");
+  Serial.print("Ontvangerfrequentie na calibratie: ");
+  Serial.print(1 / measureTime(timeout_us) * 16 * 1000);
+  Serial.println(" kHz.");
+
+  lightning.displayOscillator(false, 3);
+
+  return lightning.calibrateOsc();
+}
+
+float measureTime(unsigned long timeout_us) {
+  unsigned long start_time = micros();
+  unsigned long elapsed_time;
+  int counter = 0;
+  bool curr = 0, prev = 0;
+
+  while (digitalRead(intPin)) {
+    elapsed_time = micros() - start_time;
+    if (elapsed_time > timeout_us) {
+      return 0; // Timeout reached
+    }
+  }
+
+  start_time = micros(); // Take timestamp of start
+  while (counter < 50) {
+    curr = digitalRead(intPin);
+    if (curr == 1 && prev == 0) {
+      counter++;
+    }
+    prev = curr;
+  }
+
+  elapsed_time = micros() - start_time;
+  return elapsed_time / 50.0;
 }
