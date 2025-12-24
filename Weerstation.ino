@@ -18,7 +18,7 @@
 #include <NTPClient.h>                        // https://github.com/arduino-libraries/NTPClient
 
 #define MAX_FLOAT_VALUE 3.402823466e+38F
-#define SOFTWAREVERSION 14
+#define SOFTWAREVERSION 15
 
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};
 TimeChangeRule CET = {"CET ", Last, Sun, Oct, 3, 60};
@@ -63,8 +63,8 @@ byte image;
 byte imageold;
 byte indoor;
 int indooroffset;
-byte dauw;
-byte dauwold;
+int dauw;
+int dauwold;
 byte lv;
 byte lvold;
 byte ntp;
@@ -176,8 +176,6 @@ String normalisation;
 String normalisationold;
 String plaats;
 String plaatsold;
-String provincie;
-String provincie_short;
 String protonflux;
 String protonfluxold;
 String qthold;
@@ -248,7 +246,7 @@ void setup(void) {
   } else {
     Serial.println("Geen verbinding, opnieuw instellen");
     Display.writeStr("page 6");
-    while (wifistatus == false) Display.NextionListen();
+    while (!wifistatus) Display.NextionListen();
     Display.writeStr("page 0");
   }
   delay(1000);
@@ -308,7 +306,6 @@ void setup(void) {
   Display.writeNum("setkmu", kmu);
   Display.writeStr("page 1");
   showData();
-  knmiweeralarm();
   buienradar();
 }
 
@@ -317,7 +314,7 @@ void loop(void) {
   Display.NextionListen();
   getGPS();
 
-  if (menu == false) {
+  if (!menu) {
     if (millis() >= time_1 + 30000) {
       time_1 += 30000;
       getPropagation();
@@ -331,14 +328,13 @@ void loop(void) {
     if (millis() >= time_3 + 300000) {
       time_3 += 300000;
       getWeather();
-      knmiweeralarm();
       buienradar();
     }
 
     if (millis() >= time_4 + 5000) {
       time_4 += 5000;
       showRSSI();
-      if (display_weather == true) {
+      if (display_weather) {
         if (WiFi.status() != WL_CONNECTED) {
           Serial.println("WiFi connection lost. Reconnecting...");
           wifistatus = false;
@@ -349,7 +345,7 @@ void loop(void) {
           Display.writeStr("tsw m3,0");
           Display.writeStr("tsw m4,0");
           Display.writeNum("rssi", 0);
-          while (wifistatus == false) {
+          while (!wifistatus) {
             if (wc.autoConnect()) wifistatus = true;
           }
           Display.writeStr("tsw b_radio,1");
@@ -368,13 +364,13 @@ void loop(void) {
     if (millis() >= time_6 + 600000) {
       time_6 += 600000;
       beeper_lightning = false;
-      if (weeralarm == false) {
+      if (!weeralarm) {
         Display.writeNum("b_alarm.pic", 67);
       }
     }
 
     if (millis() >= time_5 + 300000) {
-      if (autodim == true) Display.writeStr("dim=3");
+      if (autodim) Display.writeStr("dim=3");
       time_5 += 300000;
     }
 
@@ -404,7 +400,7 @@ void loop(void) {
 
           if (lightningDistKm > 1) {
             lightningcount++;
-            if (beeper_lightning == false) {
+            if (!beeper_lightning) {
               buzzer(0);
               beeper_lightning = true;
               time_6 += 600000;
@@ -433,7 +429,7 @@ void loop(void) {
 
 void setLightning() {
   lightning.maskDisturber(true);
-  if (indoor == true) lightning.setIndoorOutdoor(0x12); else lightning.setIndoorOutdoor(0xE);
+  if (indoor) lightning.setIndoorOutdoor(0x12); else lightning.setIndoorOutdoor(0xE);
   lightning.setNoiseLevel(2);
   lightning.watchdogThreshold(threshold);
   lightning.spikeRejection(spike);
@@ -458,7 +454,6 @@ void trigger1() {   // Weather view
     if (radio == 1) Display.writeNum("radiobutton", 1);
     Display.writeStr("page 1");
     showData();
-    knmiweeralarm();
     currenttrigger = 1;
   }
 }
@@ -499,12 +494,12 @@ void trigger4() {   // Config1 view
     display_weather = false;
     Display.writeStr("page 9");
     delay(100);
-    if (alarmswitch == false) {
+    if (!alarmswitch) {
       Display.writeNum("b_weeralarm.pic", 50);
     } else {
       Display.writeNum("b_weeralarm.pic", 51);
     }
-    if (indoor == false) {
+    if (!indoor) {
       Display.writeNum("b_indoor.pic", 50);
     } else {
       Display.writeNum("b_indoor.pic", 51);
@@ -546,17 +541,17 @@ void trigger5() {   // Config1 afsluiten
     Display.writeStr("page 4");
     delay(100);
     ResetScreenData();
-    if (beeper == false) {
+    if (!beeper) {
       Display.writeNum("b_beeper.pic", 50);
     } else {
       Display.writeNum("b_beeper.pic", 51);
     }
-    if (radio == false) {
+    if (!radio) {
       Display.writeNum("b_radio.pic", 50);
     } else {
       Display.writeNum("b_radio.pic", 51);
     }
-    if (kmu == false) {
+    if (!kmu) {
       Display.writeNum("kmu.pic", 50);
     } else {
       Display.writeNum("kmu.pic", 51);
@@ -705,17 +700,17 @@ void trigger14() {  // Config 2 afsluiten
     Display.writeStr("page 8");
     delay(100);
     ResetScreenData();
-    if (autoloc == false) {
+    if (!autoloc) {
       Display.writeNum("b_autoloc.pic", 50);
     } else {
       Display.writeNum("b_autoloc.pic", 51);
     }
-    if (ntp == false) {
+    if (!ntp) {
       Display.writeNum("b_ntp.pic", 50);
     } else {
       Display.writeNum("b_ntp.pic", 51);
     }
-    if (autodim == false) {
+    if (!autodim) {
       Display.writeNum("b_dimmer.pic", 50);
     } else {
       Display.writeNum("b_dimmer.pic", 51);
@@ -804,6 +799,7 @@ void ResetScreenData() {
   indoortempold = 0;
   indoorvocold = 0;
   weeralarmold = false;
+  weercodeold = " ";
   br_tijdold = " ";
 }
 
@@ -1020,330 +1016,328 @@ void getPropagation() {
 }
 
 void getWeather() {
+  // --- Setup HTTPS client ---
   WiFiClientSecure http;
   HTTPClient https;
-  http.setInsecure();
-  http.setTimeout(2000);
+  http.setInsecure();       // Niet verifiëren van certificaat (voor hobbyprojecten)
+  http.setTimeout(2000);    // Timeout 2 seconden voor connecties
 
-  String request = "/api/json-data-10min.php?key=";
-  request += key;
-  request += "&locatie=";
-  request += String(latitude, 6);
-  request += ",";
-  request += String(longitude, 6);
+  // --- Bouw de request URL ---
+  String request = "/api/weerlive_api_v2.php?key=" + key + "&locatie=" + String(latitude, 6) + "," + String(longitude, 6);
 
-  if (http.connect("weerlive.nl", 443)) {
-    https.begin(http, "weerlive.nl", 443, request);
-    int httpCode = https.GET();
-    if (httpCode == HTTP_CODE_OK) {
-      String response = https.getString();
-      DynamicJsonDocument weer(JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(13) + 4096);
-      DeserializationError error = deserializeJson(weer, response);
-      if (error) {
-        http.stop();
-        return;
-      }
-      plaats = weer["liveweer"][0]["plaats"].as<String>();
-      temp = weer["liveweer"][0]["temp"].as<float>() * 10;
-      samenv = weer["liveweer"][0]["samenv"].as<String>();
-      lv = weer["liveweer"][0]["lv"].as<byte>();
-      dauw = weer["liveweer"][0]["dauwp"].as<byte>();
-      windr = weer["liveweer"][0]["windr"].as<String>();
-      winds = weer["liveweer"][0]["winds"].as<byte>();
-      windkmh = weer["liveweer"][0]["windkmh"].as<float>() * 10;
-      windms = weer["liveweer"][0]["windms"].as<int>();
-      luchtd = weer["liveweer"][0]["luchtd"].as<float>() * 10;
-      zicht = weer["liveweer"][0]["zicht"].as<byte>();
-      verw = weer["liveweer"][0]["verw"].as<String>();
-      zonop = weer["liveweer"][0]["sup"].as<String>();
-      zononder = weer["liveweer"][0]["sunder"].as<String>();
-      alarmtxt = weer["liveweer"][0]["alarmtxt"].as<String>();
-      if (alarmtxt.length() == 0) {
-        alarmtxt = "Er zijn geen algemene waarschuwingen van kracht";
-      }
+  // --- Verbinden met server ---
+  if (!http.connect("weerlive.nl", 443)) return;  // Stop als connectie mislukt
 
-      if (weer["liveweer"][0]["image"].as<String>() == "zonnig") {
-        image = 16;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "bliksem") {
-        image = 17;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "regen") {
-        image = 18;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "buien") {
-        image = 19;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "hagel") {
-        image = 20;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "mist") {
-        image = 21;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "sneeuw") {
-        image = 22;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "bewolkt") {
-        image = 23;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "lichtbewolkt") {
-        image = 24;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "halfbewolkt") {
-        image = 25;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "halfbewolkt_regen") {
-        image = 26;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "zwaarbewolkt") {
-        image = 27;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "nachtmist") {
-        image = 28;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "helderenacht") {
-        image = 29;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "wolkennacht") {
-        image = 30;
-      } else if (weer["liveweer"][0]["image"].as<String>() == "nachtbewolkt") {
-        image = 30;
-      }
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "zonnig") d1image = 31;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "bliksem") d1image = 32;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "regen") d1image = 33;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "buien") d1image = 34;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "hagel") d1image = 35;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "mist") d1image = 36;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "sneeuw") d1image = 37;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "bewolkt") d1image = 38;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "lichtbewolkt") d1image = 39;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "halfbewolkt") d1image = 40;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "halfbewolkt_regen") d1image = 41;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "zwaarbewolkt") d1image = 42;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "nachtmist") d1image = 43;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "helderenacht") d1image = 44;
-      if (weer["liveweer"][0]["d1weer"].as<String>() == "nachtbewolkt") d1image = 45;
-
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "zonnig") d2image = 31;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "bliksem") d2image = 32;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "regen") d2image = 33;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "buien") d2image = 34;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "hagel") d2image = 35;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "mist") d2image = 36;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "sneeuw") d2image = 37;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "bewolkt") d2image = 38;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "lichtbewolkt") d2image = 39;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "halfbewolkt") d2image = 40;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "halfbewolkt_regen") d2image = 41;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "zwaarbewolkt") d2image = 42;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "nachtmist") d2image = 43;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "helderenacht") d2image = 44;
-      if (weer["liveweer"][0]["d2weer"].as<String>() == "nachtbewolkt") d2image = 45;
-
-      d1zon = weer["liveweer"][0]["d1zon"].as<int>();
-      d1neerslag = weer["liveweer"][0]["d1neerslag"].as<int>();
-      d2zon = weer["liveweer"][0]["d2zon"].as<int>();
-      d2neerslag = weer["liveweer"][0]["d2neerslag"].as<int>();
-      d0tmin = weer["liveweer"][0]["d0tmin"].as<int>();
-      d0tmax = weer["liveweer"][0]["d0tmax"].as<int>();
-      d1tmin = weer["liveweer"][0]["d1tmin"].as<int>();
-      d1tmax = weer["liveweer"][0]["d1tmax"].as<int>();
-      d1windk = weer["liveweer"][0]["d1windk"].as<byte>();
-      d1windr = weer["liveweer"][0]["d1windr"].as<String>();
-      d2tmin = weer["liveweer"][0]["d2tmin"].as<int>();
-      d2tmax = weer["liveweer"][0]["d2tmax"].as<int>();
-      d2windk = weer["liveweer"][0]["d2windk"].as<byte>();
-      d2windr = weer["liveweer"][0]["d2windr"].as<String>();
-      if (windr == "Noord") {
-        windr = "N";
-      } else if (windr == "West") {
-        windr = "W";
-      } else if (windr == "Oost") {
-        windr = "O";
-      } else if (windr == "Zuid") {
-        windr = "Z";
-      }
-    } else {
-      Serial.println("weerlive: Failed to make HTTP request. Error code: " + String(httpCode));
-    }
+  https.begin(http, "weerlive.nl", 443, request);
+  int httpCode = https.GET();
+  if (httpCode != HTTP_CODE_OK) {                   // HTTP check
+    https.end();
+    return;
   }
-  https.end();
+
+  // --- JSON payload ophalen ---
+  String response = https.getString();
+  DynamicJsonDocument weer(JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(13) + 4096);
+  DeserializationError error = deserializeJson(weer, response);
+  if (error) {                                      // Stop bij JSON fout
+    https.end();
+    return;
+  }
+
+  // --- Liveweer object ---
+  JsonObject live = weer["liveweer"][0];
+  JsonArray wk_verw = weer["wk_verw"];              // Weekverwachting array
+
+  // --- Basis live-weer gegevens ---
+  plaats = live["plaats"] | "";                     // Plaatsnaam
+  temp = int(live["temp"].as<float>() * 10);        // Temperatuur ×10 (int)
+  samenv = live["samenv"] | "";                     // Samenvatting
+  lv = live["lv"] | 0;                              // Luchtvochtigheid in %
+  dauw = int(live["dauwp"].as<float>() * 10);       // Dauwpunt ×10 (int)
+  windr = live["windr"] | "";                       // Windrichting
+  winds = live["windbft"] | 0;                      // Windkracht (Beaufort)
+  windkmh = int(live["windkmh"].as<float>() * 10);  // Windsnelheid km/h ×10
+  windms = live["windms"] | 0;                      // Windsnelheid m/s
+  luchtd = int(live["luchtd"].as<float>() * 10);    // Luchtdruk ×10
+  zicht = live["zicht"] | 0;                        // Zicht in meters
+  verw = live["verw"] | "";                         // Verwachting tekst
+  zonop = live["sup"] | "";                         // Zonopkomst tijd
+  zononder = live["sunder"] | "";                   // Zonsondergang tijd
+  alarmtxt = live["ltekst"] | "";                   // Eventuele waarschuwingstekst
+
+  // --- Weeralarm en code ---
+  weercode = live["wrschklr"] | "groen";            // Tekstcode van weeralarm ("groen", "geel", "oranje", "rood")
+  weeralarm = (weercode != "groen");                // true indien niet groen
+
+  // --- Image mapping (weericoon) ---
+  String img = live["image"] | "";
+  if (img == "zonnig") image = 16;
+  else if (img == "bliksem") image = 17;
+  else if (img == "regen") image = 18;
+  else if (img == "buien") image = 19;
+  else if (img == "hagel") image = 20;
+  else if (img == "mist") image = 21;
+  else if (img == "sneeuw") image = 22;
+  else if (img == "bewolkt") image = 23;
+  else if (img == "lichtbewolkt") image = 24;
+  else if (img == "halfbewolkt") image = 25;
+  else if (img == "halfbewolkt_regen") image = 26;
+  else if (img == "zwaarbewolkt") image = 27;
+  else if (img == "nachtmist") image = 28;
+  else if (img == "helderenacht") image = 29;
+  else if (img == "wolkennacht" || img == "nachtbewolkt") image = 30;
+
+  // --- Dagelijkse temperaturen en wind ---
+  if (wk_verw.size() > 0) {  // Vandaag
+    d0tmin = int(wk_verw[0]["min_temp"].as<int>());
+    d0tmax = int(wk_verw[0]["max_temp"].as<int>());
+  }
+  if (wk_verw.size() > 1) {  // Morgen
+    d1tmin = int(wk_verw[1]["min_temp"].as<int>());
+    d1tmax = int(wk_verw[1]["max_temp"].as<int>());
+    d1windk = wk_verw[1]["windbft"] | 0;
+    d1windr = wk_verw[1]["windr"] | "";
+    d1zon = wk_verw[1]["zond_perc_dag"] | 0;
+    d1neerslag = wk_verw[1]["neersl_perc_dag"] | 0;
+  }
+  if (wk_verw.size() > 2) {  // Overmorgen
+    d2tmin = int(wk_verw[2]["min_temp"].as<int>());
+    d2tmax = int(wk_verw[2]["max_temp"].as<int>());
+    d2windk = wk_verw[2]["windbft"] | 0;
+    d2windr = wk_verw[2]["windr"] | "";
+    d2zon = wk_verw[2]["zond_perc_dag"] | 0;
+    d2neerslag = wk_verw[2]["neersl_perc_dag"] | 0;
+  }
+
+  // --- Windrichting verkorten ---
+  if (windr == "Noord") windr = "N";
+  else if (windr == "Oost") windr = "O";
+  else if (windr == "Zuid") windr = "Z";
+  else if (windr == "West") windr = "W";
+
+  https.end(); // Sluit HTTP client netjes af
 }
 
-void getMUF() {
+void getMUF(void) {
   HTTPClient http;
-  http.setTimeout(2000);
-  String url = "http://ionosphere.meteo.be/ionosphere/MUF/latest-MUF-DB049.php";
-  http.begin(url);
 
+  // Stel een timeout in van 2000 ms
+  http.setTimeout(2000);
+
+  String url = "http://ionosphere.meteo.be/ionosphere/MUF/latest-MUF-DB049.php";
+
+  // Start HTTP-verbinding, controleer of dit lukt
+  if (!http.begin(url)) {
+    Serial.println("HTTP begin failed");
+    return;
+  }
+
+  // Voer GET-request uit
   int httpCode = http.GET();
+
   if (httpCode == HTTP_CODE_OK) {
+    // Haal de response op als String
     String payload = http.getString();
 
-    // Find the position of the first occurrence of "MUF(MHz)"
+    // Zoek de start van de data door "MUF(MHz)" te vinden
     int startIndex = payload.indexOf("MUF(MHz)");
     if (startIndex != -1) {
-      // Move to the first line with data
-      startIndex = payload.indexOf('\n', startIndex);
-      String mufData = payload.substring(startIndex + 1);
+      // Ga naar de volgende regel na de koptekst
+      int lineEnd = payload.indexOf('\n', startIndex);
+      String mufData = payload.substring(lineEnd + 1);
 
-      // Split the payload into lines and extract the MUF values
-      for (int i = 0; i < 9; i++) {
-        int spaceIndex = mufData.indexOf(' ');
-        int endIndex = mufData.indexOf('\n');
-        if (spaceIndex != -1 && endIndex != -1) {
-          String mufLine = mufData.substring(spaceIndex + 1, endIndex);
-          mufLine.trim();
-          // Remove the 4-digit number from the string
-          mufLine = mufLine.substring(5);
-          muf_string[i] = mufLine;
-          mufData = mufData.substring(endIndex + 1);
+      int lineCount = 0;
+
+      // Verwerk maximaal 9 lijnen (voor muf_string[9])
+      while (lineCount < 9) {
+        int nextLine = mufData.indexOf('\n');
+        if (nextLine == -1) break; // geen lijnen meer beschikbaar
+
+        // Haal de huidige regel
+        String line = mufData.substring(0, nextLine);
+        line.trim(); // verwijder voor- en achterliggende spaties
+
+        // Controleer dat de regel lang genoeg is om MUF-waarde te bevatten
+        if (line.length() > 5) {
+          // Verwijder de eerste 4 cijfers + spatie (ID/celnummer)
+          muf_string[lineCount] = line.substring(5);
         } else {
-          break; // Break if there are no more lines
+          // Als lijn te kort is, fallback naar "0"
+          muf_string[lineCount] = "0";
         }
+
+        // Verwijder de verwerkte lijn uit de data
+        mufData = mufData.substring(nextLine + 1);
+        lineCount++;
+      }
+    } else {
+      Serial.println("MUF header niet gevonden!");
+      // Fallback: vul array met "0" als koptekst niet gevonden wordt
+      for (int i = 0; i < 9; i++) {
+        muf_string[i] = "0";
       }
     }
   } else {
-    Serial.printf("Verbinding met http://ionosphere.meteo.be/ionosphere/MUF/latest-MUF-DB049.php mislukt. Error code: %d\n", httpCode);
+    // GET-request mislukt, log error code
+    Serial.printf("HTTP GET mislukt. Code: %d\n", httpCode);
+    // Fallback: vul array met "0"
+    for (int i = 0; i < 9; i++) {
+      muf_string[i] = "0";
+    }
   }
+
+  // Sluit de HTTP-verbinding
   http.end();
 }
 
-void showData() {
+void showData(void) {
   if (lightningtextmerge != lightningtextmergeold) {
-    if (display_alarm == true) Display.writeStr("lightning.txt", lightningtextmerge); delay(10);
+    if (display_alarm) Display.writeStr("lightning.txt", lightningtextmerge);
     lightningtextmergeold = lightningtextmerge;
   }
 
   if (solarflux != solarfluxold) {
     Serial.print("Solarflux               : ");
     Serial.println(solarflux);
-    if (display_radio == true) Display.writeStr("solarflux.txt", solarflux); delay(10);
+    if (display_radio) Display.writeStr("solarflux.txt", solarflux); delay(10);
     solarfluxold = solarflux;
   }
   if (aindex != aindexold) {
     Serial.print("A-index                 : ");
     Serial.println(aindex);
-    if (display_radio == true) Display.writeStr("aindex.txt", aindex); delay(10);
+    if (display_radio) Display.writeStr("aindex.txt", aindex); delay(10);
     aindexold = aindex;
   }
   if (kindex != kindexold) {
     Serial.print("K-index                 : ");
     Serial.println(kindex);
-    if (display_radio == true) Display.writeStr("kindex.txt", kindex); delay(10);
+    if (display_radio) Display.writeStr("kindex.txt", kindex); delay(10);
     kindexold = kindex;
   }
   if (sunspots != sunspotsold) {
     Serial.print("Aantal zonnevlekken     : ");
     Serial.println(sunspots);
-    if (display_radio == true) Display.writeStr("sunspots.txt", sunspots); delay(10);
+    if (display_radio) Display.writeStr("sunspots.txt", sunspots); delay(10);
     sunspotsold = sunspots;
   }
   if (protonflux != protonfluxold) {
     Serial.print("Protonflux              : ");
     Serial.println(protonflux);
-    if (display_radio == true) Display.writeStr("protonflux.txt", protonflux); delay(10);
+    if (display_radio) Display.writeStr("protonflux.txt", protonflux); delay(10);
     protonfluxold = protonflux;
   }
   if (electonflux != electonfluxold) {
     Serial.print("Electonflux             : ");
     Serial.println(electonflux);
-    if (display_radio == true) Display.writeStr("electonflux.txt", electonflux); delay(10);
+    if (display_radio) Display.writeStr("electonflux.txt", electonflux); delay(10);
     electonfluxold = electonflux;
   }
   if (aurora != auroraold) {
     Serial.print("Aurora                  : ");
     Serial.println(aurora);
-    if (display_radio == true) Display.writeStr("aurora.txt", aurora); delay(10);
+    if (display_radio) Display.writeStr("aurora.txt", aurora); delay(10);
     auroraold = aurora;
   }
   if (normalisation != normalisationold) {
     Serial.print("Aurora normalisatie     : ");
     Serial.println(normalisation);
-    if (display_radio == true) Display.writeStr("normalisation.txt", normalisation); delay(10);
+    if (display_radio) Display.writeStr("normalisation.txt", normalisation); delay(10);
     normalisationold = normalisation;
   }
   if (latdegree != latdegreeold) {
     Serial.print("Aurora breedtegraad     : ");
     Serial.println(latdegree);
-    if (display_radio == true) Display.writeStr("latdegree.txt", latdegree); delay(10);
+    if (display_radio) Display.writeStr("latdegree.txt", latdegree); delay(10);
     latdegreeold = latdegree;
   }
   if (solarwind != solarwindold) {
     Serial.print("Zonnewind               : ");
     Serial.println(solarwind);
-    if (display_radio == true) Display.writeStr("solarwind.txt", solarwind); delay(10);
+    if (display_radio) Display.writeStr("solarwind.txt", solarwind); delay(10);
     solarwindold = solarwind;
   }
   if (magneticfield != magneticfieldold) {
     Serial.print("Magnetisch veld         : ");
     Serial.println(magneticfield);
-    if (display_radio == true) Display.writeStr("magneticfield.txt", magneticfield); delay(10);
+    if (display_radio) Display.writeStr("magneticfield.txt", magneticfield); delay(10);
     magneticfieldold = magneticfield;
   }
   if (geomagfield != geomagfieldold) {
     Serial.print("Geomagnetisch veld      : ");
     Serial.println(geomagfield);
-    if (display_radio == true) Display.writeStr("geomagfield.txt", geomagfield); delay(10);
+    if (display_radio) Display.writeStr("geomagfield.txt", geomagfield); delay(10);
     geomagfieldold = geomagfield;
   }
   if (d8040m != d8040mold) {
     Serial.print("80-40m overdag          : ");
     Serial.println(d8040m);
-    if (display_radio == true) Display.writeStr("d8040.txt", d8040m); delay(10);
+    if (display_radio) Display.writeStr("d8040.txt", d8040m); delay(10);
     d8040mold = d8040m;
   }
   if (n8040m != n8040mold) {
     Serial.print("80-40m 's nachts        : ");
     Serial.println(n8040m);
-    if (display_radio == true) Display.writeStr("n8040.txt", n8040m); delay(10);
+    if (display_radio) Display.writeStr("n8040.txt", n8040m); delay(10);
     n8040mold = n8040m;
   }
   if (d3020m != d3020mold) {
     Serial.print("30-20m overdag          : ");
     Serial.println(d3020m);
-    if (display_radio == true) Display.writeStr("d3020.txt", d3020m); delay(10);
+    if (display_radio) Display.writeStr("d3020.txt", d3020m); delay(10);
     d3020mold = d3020m;
   }
   if (n3020m != n3020mold) {
     Serial.print("30-20m 's nachts        : ");
     Serial.println(n3020m);
-    if (display_radio == true) Display.writeStr("n3020.txt", n3020m); delay(10);
+    if (display_radio) Display.writeStr("n3020.txt", n3020m); delay(10);
     n3020mold = n3020m;
   }
   if (d1715m != d1715mold) {
     Serial.print("17-15m overdag          : ");
     Serial.println(d1715m);
-    if (display_radio == true) Display.writeStr("d1715.txt", d1715m); delay(10);
+    if (display_radio) Display.writeStr("d1715.txt", d1715m); delay(10);
     d1715mold = d1715m;
   }
   if (n1715m != n1715mold) {
     Serial.print("17-15m 's nachts        : ");
     Serial.println(n1715m);
-    if (display_radio == true) Display.writeStr("n1715.txt", n1715m); delay(10);
+    if (display_radio) Display.writeStr("n1715.txt", n1715m); delay(10);
     n1715mold = n1715m;
   }
   if (d1210m != d1210mold) {
     Serial.print("12-10m overdag          : ");
     Serial.println(d1210m);
-    if (display_radio == true) Display.writeStr("d1210.txt", d1210m); delay(10);
+    if (display_radio) Display.writeStr("d1210.txt", d1210m); delay(10);
     d1210mold = d1210m;
   }
   if (n1210m != n1210mold) {
     Serial.print("12-10m 's nachts        : ");
     Serial.println(n1210m);
-    if (display_radio == true) Display.writeStr("n1210.txt", n1210m); delay(10);
+    if (display_radio) Display.writeStr("n1210.txt", n1210m); delay(10);
     n1210mold = n1210m;
   }
   if (signalnoise != signalnoiseold) {
     Serial.print("HF ruisvloer            : ");
     Serial.println(signalnoise);
-    if (display_radio == true) Display.writeStr("signalnoise.txt", signalnoise); delay(10);
+    if (display_radio) Display.writeStr("signalnoise.txt", signalnoise); delay(10);
     signalnoiseold = signalnoise;
   }
   if (es2m != es2mold) {
     Serial.print("Sporadische E 2m        : ");
     Serial.println(es2m);
-    if (display_radio == true) Display.writeStr("vhf2.txt", es2m); delay(10);
+    if (display_radio) Display.writeStr("vhf2.txt", es2m); delay(10);
     es2mold = es2m;
   }
   if (es6m != es6mold) {
     Serial.print("Sporadische E 6m        : ");
     Serial.println(es6m);
-    if (display_radio == true) Display.writeStr("vhf6.txt", es6m); delay(10);
+    if (display_radio) Display.writeStr("vhf6.txt", es6m); delay(10);
     es6mold = es6m;
   }
   if (es4m != es4mold) {
     Serial.print("Sporadische E 4m        : ");
     Serial.println(es4m);
-    if (display_radio == true) Display.writeStr("vhf4.txt", es4m); delay(10);
+    if (display_radio) Display.writeStr("vhf4.txt", es4m); delay(10);
     es4mold = es4m;
   }
   if (muf_string[8] != muf_stringold[8]) {
@@ -1402,10 +1396,9 @@ void showData() {
   }
 
   if (plaats != plaatsold || String(get_mh(latitude, longitude, 10)) != qthold) {
-    if (plaats.length() > 0) Provinciecall();
     Serial.print("Locatie                 : ");
-    Serial.println(plaats + " (" + provincie + ")");
-    Display.writeStr("plaats.txt", plaats + "(" + provincie_short + ")" + (radio ? " " + String(get_mh(latitude, longitude, 10)) : ""));
+    Serial.println(plaats);
+    Display.writeStr("plaats.txt", plaats + (radio ? " " + String(get_mh(latitude, longitude, 10)) : ""));
     plaatsold = plaats;
   }
 
@@ -1418,49 +1411,57 @@ void showData() {
   if (weercode != weercodeold) {
     Serial.print("Weercode                : ");
     Serial.println(weercode);
+
+    if (display_weather) {
+      if (weercode == "groen") Display.writeNum("weercode.pic", 69);
+      else if (weercode == "geel") Display.writeNum("weercode.pic", 70);
+      else if (weercode == "oranje") Display.writeNum("weercode.pic", 71);
+      else if (weercode == "rood") Display.writeNum("weercode.pic", 72);
+    }
+
     weercodeold = weercode;
   }
 
   if (temp != tempold) {
     Serial.print("Temperatuur (/10)       : ");
     Serial.println(temp);
-    if (display_weather == true) Display.writeNum("actualtemp.val", temp);
+    if (display_weather) Display.writeNum("actualtemp.val", temp);
     tempold = temp;
   }
   if (samenv != samenvold) {
     Serial.print("Actueel weerbeeld       : ");
     Serial.println(samenv);
-    if (display_weather == true) Display.writeStr("actualtext.txt", samenv);
+    if (display_weather) Display.writeStr("actualtext.txt", samenv);
     samenvold = samenv;
   }
   if (lv != lvold) {
     Serial.print("Luchtvochtigheid        : ");
     Serial.println(lv);
-    if (display_weather == true) Display.writeNum("luchtv.val", lv);
+    if (display_weather) Display.writeNum("luchtv.val", lv);
     lvold = lv;
   }
   if (dauw != dauwold) {
-    Serial.print("Dauwpunt                : ");
+    Serial.print("Dauwpunt (/10)          : ");
     Serial.println(dauw);
-    if (display_weather == true) Display.writeNum("dauwp.val", dauw);
+    if (display_weather) Display.writeNum("dauwp.val", dauw);
     dauwold = dauw;
   }
   if (zonop != zonopold) {
     Serial.print("Zon op                  : ");
     Serial.println(zonop);
-    if (display_weather == true) Display.writeStr("zonop.txt", zonop);
+    if (display_weather) Display.writeStr("zonop.txt", zonop);
     zonopold = zonop;
   }
   if (zononder != zononderold) {
     Serial.print("Zon onder               : ");
     Serial.println(zononder);
-    if (display_weather == true) Display.writeStr("zononder.txt", zononder);
+    if (display_weather) Display.writeStr("zononder.txt", zononder);
     zononderold = zononder;
   }
   if (windr != windrold) {
     Serial.print("Windrichting            : ");
     Serial.println(windr);
-    if (display_weather == true) {
+    if (display_weather) {
       if (windr == "N") Display.writeNum("actualwindr.pic", 0);
       if (windr == "NNO") Display.writeNum("actualwindr.pic", 1);
       if (windr == "NO") Display.writeNum("actualwindr.pic", 2);
@@ -1484,25 +1485,25 @@ void showData() {
   if (winds != windsold) {
     Serial.print("Windkracht bft          : ");
     Serial.println(winds);
-    if (display_weather == true) Display.writeNum("actualbft.val", winds);
+    if (display_weather) Display.writeNum("actualbft.val", winds);
     windsold = winds;
   }
   if (windkmh != windkmhold) {
     Serial.print("Windsnelheid km/u (/10) : ");
     Serial.println(windkmh);
-    if (display_weather == true && kmu == true) Display.writeNum("actualwindkmh.val", windkmh);
+    if (display_weather && kmu) Display.writeNum("actualwindkmh.val", windkmh);
     windkmhold = windkmh;
   }
   if (windms != windmsold) {
     Serial.print("Windsnelheid m/s        : ");
     Serial.println(windms);
-    if (display_weather == true && kmu == false) Display.writeNum("actualwindkmh.val", windms);
+    if (display_weather && kmu) Display.writeNum("actualwindkmh.val", windms);
     windmsold = windms;
   }
   if (luchtd != luchtdold) {
     Serial.print("Luchtdruk (/10)         : ");
     Serial.println(luchtd);
-    if (display_weather == true) Display.writeNum("luchtd.val", luchtd);
+    if (display_weather) Display.writeNum("luchtd.val", luchtd);
     luchtdold = luchtd;
   }
   if (zicht != zichtold) {
@@ -1513,22 +1514,22 @@ void showData() {
   if (verw != verwold) {
     Serial.print("Weersverwachting        : ");
     Serial.println(verw);
-    if (display_weather == true) Display.writeStr("d0text.txt", verw);
+    if (display_weather) Display.writeStr("d0text.txt", verw);
     verwold = verw;
   }
   if (image != imageold) {
     Serial.print("Weer icoon              : ");
     Serial.println(image);
-    if (display_weather == true) Display.writeNum("weerimage.pic", image);
+    if (display_weather) Display.writeNum("weerimage.pic", image);
     imageold = image;
   }
   if (weeralarm != weeralarmold) {
     Serial.print("Waarschuwing            : ");
     Serial.println(weeralarm);
-    if (display_weather == true) {
-      if (weeralarm == true) {
+    if (display_weather) {
+      if (weeralarm) {
         Display.writeNum("b_alarm.pic", 49);
-        if (beeper_alarm == false) {
+        if (!beeper_alarm) {
           buzzer(1);
           beeper_alarm = true;
         }
@@ -1547,61 +1548,61 @@ void showData() {
   if (d1zon != d1zonold) {
     Serial.print("Kans op zon morgen      : ");
     Serial.println(d1zon);
-    if (display_weather == true) Display.writeNum("d1zon.val", d1zon);
+    if (display_weather) Display.writeNum("d1zon.val", d1zon);
     d1zonold = d1zon;
   }
   if (d1neerslag != d1neerslagold) {
     Serial.print("Kans op regen morgen    : ");
     Serial.println(d1neerslag);
-    if (display_weather == true) Display.writeNum("d1neerslag.val", d1neerslag);
+    if (display_weather) Display.writeNum("d1neerslag.val", d1neerslag);
     d1neerslagold = d1neerslag;
   }
   if (d2zon != d2zonold) {
     Serial.print("Kans op zon overmorgen  : ");
     Serial.println(d2zon);
-    if (display_weather == true) Display.writeNum("d2zon.val", d2zon);
+    if (display_weather) Display.writeNum("d2zon.val", d2zon);
     d2zonold = d2zon;
   }
   if (d2neerslag != d2neerslagold) {
     Serial.print("Kans op regen overmorgen: ");
     Serial.println(d2neerslag);
-    if (display_weather == true) Display.writeNum("d2neerslag.val", d2neerslag);
+    if (display_weather) Display.writeNum("d2neerslag.val", d2neerslag);
     d2neerslagold = d2neerslag;
   }
   if (d1image != d1imageold) {
     Serial.print("Weer icoon morgen       : ");
     Serial.println(d1image);
-    if (display_weather == true) Display.writeNum("d1image.pic", d1image);
+    if (display_weather) Display.writeNum("d1image.pic", d1image);
     d1imageold = d1image;
   }
   if (d2image != d2imageold) {
     Serial.print("Weer icoon overmorgen   : ");
     Serial.println(d2image);
-    if (display_weather == true) Display.writeNum("d2image.pic", d2image);
+    if (display_weather) Display.writeNum("d2image.pic", d2image);
     d2imageold = d2image;
   }
   if (d0tmin != d0tminold) {
     Serial.print("Minimum temp. vandaag   : ");
     Serial.println(d0tmin);
-    if (display_weather == true) Display.writeNum("d0min.val", d0tmin);
+    if (display_weather) Display.writeNum("d0min.val", d0tmin);
     d0tminold = d0tmin;
   }
   if (d0tmax != d0tmaxold) {
     Serial.print("Maximum temp. Vandaag   : ");
     Serial.println(d0tmax);
-    if (display_weather == true) Display.writeNum("d0max.val", d0tmax);
+    if (display_weather) Display.writeNum("d0max.val", d0tmax);
     d0tmaxold = d0tmax;
   }
   if (d1tmin != d1tminold || d1tmax != d1tmaxold) {
     Serial.print("Min/max temp. morgen    : ");
-    if (display_weather == true) Display.writeStr("d1temp.txt", (String(d1tmin) + "/" + String(d1tmax) + "\xB0"));
+    if (display_weather) Display.writeStr("d1temp.txt", (String(d1tmin) + "/" + String(d1tmax) + "\xB0"));
     Serial.println(String(d1tmin) + "/" + String(d1tmax) + "°");
     d1tminold = d1tmin;
     d1tmaxold = d1tmax;
   }
   if (d2tmin != d2tminold || d2tmax != d2tmaxold) {
     Serial.print("Min/max temp. morgen    : ");
-    if (display_weather == true) Display.writeStr("d2temp.txt", (String(d2tmin) + "/" + String(d2tmax)) + "\xB0");
+    if (display_weather) Display.writeStr("d2temp.txt", (String(d2tmin) + "/" + String(d2tmax)) + "\xB0");
     Serial.println(String(d2tmin) + "/" + String(d2tmax) + "°");
     d2tminold = d2tmin;
     d2tmaxold = d2tmax;
@@ -1609,18 +1610,18 @@ void showData() {
   if (d1windk != d1windkold) {
     Serial.print("Windkracht morgen bft.  : ");
     Serial.println(d1windk);
-    if (display_weather == true) Display.writeNum("d1windk.val", d1windk);
+    if (display_weather) Display.writeNum("d1windk.val", d1windk);
     d1windkold = d1windk;
   }
   if (d2windk != d2windkold) {
     Serial.print("Windkr. overmorgen bft. : ");
     Serial.println(d2windk);
-    if (display_weather == true) Display.writeNum("d2windk.val", d2windk);
+    if (display_weather) Display.writeNum("d2windk.val", d2windk);
     d2windkold = d2windk;
   }
   if (d1windr != d1windrold) {
     Serial.print("Windrichting morgen     : ");
-    if (display_weather == true) {
+    if (display_weather) {
       if (d1windr == "N") Display.writeNum("d1windr.pic", 0);
       if (d1windr == "NNO") Display.writeNum("d1windr.pic", 1);
       if (d1windr == "NO") Display.writeNum("d1windr.pic", 2);
@@ -1644,7 +1645,7 @@ void showData() {
   }
   if (d2windr != d2windrold) {
     Serial.print("Windrichting overmorgen : ");
-    if (display_weather == true) {
+    if (display_weather) {
       if (d2windr == "N") Display.writeNum("d2windr.pic", 0);
       if (d2windr == "NNO") Display.writeNum("d2windr.pic", 1);
       if (d2windr == "NO") Display.writeNum("d2windr.pic", 2);
@@ -1670,26 +1671,26 @@ void showData() {
   if (indoortemp != indoortempold) {
     Serial.print("Temperatuur (/10)       : ");
     Serial.println(indoortemp);
-    if (display_weather == true && indoortemp != -9990) Display.writeNum("indoortemp.val", indoortemp);
+    if (display_weather && indoortemp != -9990) Display.writeNum("indoortemp.val", indoortemp);
     indoortempold = indoortemp;
   }
   if (indoorhum != indoorhumold) {
     Serial.print("Luchtvochtigheid (/10)  : ");
     Serial.println(indoorhum);
-    if (display_weather == true && indoorhum != -9990) Display.writeNum("indoorhum.val", indoorhum);
+    if (display_weather && indoorhum != -9990) Display.writeNum("indoorhum.val", indoorhum);
     indoorhumold = indoorhum;
   }
   if (indoorvoc != indoorvocold) {
     Serial.print("VOC                     : ");
     Serial.println(indoorvoc);
-    if (display_weather == true) Display.writeNum("vocgauge.val", indoorvoc / 2.77);
-    if (display_weather == true) Display.writeNum("voc.val", indoorvoc);
-    if (display_weather == true) Display.writeStr("voctxt.txt", "VOC");
+    if (display_weather) Display.writeNum("vocgauge.val", indoorvoc / 2.77);
+    if (display_weather) Display.writeNum("voc.val", indoorvoc);
+    if (display_weather) Display.writeStr("voctxt.txt", "VOC");
     indoorvocold = indoorvoc;
   }
 
   if (String(br_tijd[0]) != br_tijdold) {
-    if (display_weather == true) Display.writeStr("br_mmu.txt", (br_mmpu[0] > 0 ? String(float(pow(10, (float(br_mmpu[0]) - 109) / 32)), 1) : "0.0") + "mm/u");
+    if (display_weather) Display.writeStr("br_mmu.txt", (br_mmpu[0] > 0 ? String(float(pow(10, (float(br_mmpu[0]) - 109) / 32)), 1) : "0.0") + "mm/u");
 
     int max_value = br_mmpu[0];
     for (int i = 1; i < 24; i++) {
@@ -1707,7 +1708,7 @@ void showData() {
       }
     }
 
-    if (display_weather == true) {
+    if (display_weather) {
       for (int i = 0; i < 24; i++) {
         Display.writeStr("fill " + String(i + 48) + ",88,1," + String(24 - new_array[i]) + ",33840");
 
@@ -1721,7 +1722,7 @@ void showData() {
 }
 
 void buildMUFticker() {
-  if (display_radio == true) {
+  if (display_radio) {
     Display.writeStr("muf.txt", String("MUF QRB: <100km: " + String(muf_string[0]) + "MHz  100-200km: " + String(muf_string[1]) + "MHz  200-400km: " + String(muf_string[2]) + "MHz  400-600km: " + String(muf_string[3]) + "MHz  600-800km: " + String(muf_string[4]) + "MHz  800-1000km: " + String(muf_string[5]) + "MHz  1000-1500km: " + String(muf_string[6]) + "MHz  1500-3000km: " + String(muf_string[7]) + "MHz  >3000km: " + String(muf_string[8]) + "MHz     ")); delay(10);
   }
 }
@@ -1738,14 +1739,16 @@ void showGPS() {
     longitudeold = String(gps.location.lng(), 6);
   }
 
-  if (display_gps == true) {
-    if (gps.location.isValid() == true) {
+  if (display_gps) {
+    if (gps.location.isValid()) {
+      Display.writeStr("locator.txt", String(get_mh(latitude, longitude, 10)));
       Display.writeStr("longitude.txt", String(gps.location.lng(), 10));
       Display.writeStr("latitude.txt", String(gps.location.lat(), 10));
       Display.writeStr("height.txt", String(gps.altitude.meters()) + "m");
       Display.writeStr("hdop.txt", String(gps.hdop.hdop()));
       Display.writeStr("sats.txt", String(gps.satellites.value()));
     } else {
+      Display.writeStr("locator.txt", "Geen data");
       Display.writeStr("longitude.txt", "Geen data");
       Display.writeStr("latitude.txt", "Geen data");
       Display.writeStr("height.txt", "Geen data");
@@ -1767,9 +1770,9 @@ void getGPS() {
   while (ss.available() > 0) {
     gps.encode(ss.read());
 
-    if (gps.location.isValid() == true)
+    if (gps.location.isValid())
     {
-      if (autoloc == true && gps.location.lng() > 3.4 && gps.location.lng() < 7.3 && gps.location.lat() > 50.7 && gps.location.lat() < 53.6) {
+      if (autoloc && gps.location.lng() > 3.4 && gps.location.lng() < 7.3 && gps.location.lat() > 50.7 && gps.location.lat() < 53.6) {
         longitude = gps.location.lng();
         latitude = gps.location.lat();
         EEPROM.writeDouble(1, longitude);
@@ -1777,7 +1780,7 @@ void getGPS() {
         EEPROM.commit();
       }
     }
-    if (ntp == false) {
+    if (!ntp) {
       if (gps.time.isValid() && gps.date.isValid()) {
         setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
       }
@@ -1839,26 +1842,26 @@ void FormatTime(Timezone tz) {
   datetime = String(dayname + " " + String(day(t)) + " " + monthname + " " + String(year(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "") + String(minute(t)) + ":" + (second(t) < 10 ? "0" : "") + String(second(t)) + " ");
   datetimestamp = (String(day(t)) + "/" + String(month(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "")  + String(minute(t)) + " ");
 
-  if (gps.location.isValid() == true || ntp == true)
+  if (gps.location.isValid() || ntp)
   {
     if (datetime != datetimeold) {
       Display.writeStr("tijd.txt", datetime);
       datetimeold = datetime;
     }
     if (dayname1 != dayname1old) {
-      if (display_weather == true) Display.writeStr("d1name.txt", dayname1);
+      if (display_weather) Display.writeStr("d1name.txt", dayname1);
       dayname1old = dayname1;
     }
     if (dayname2 != dayname2old) {
-      if (display_weather == true) Display.writeStr("d2name.txt", dayname2);
+      if (display_weather) Display.writeStr("d2name.txt", dayname2);
       dayname2old = dayname2;
     }
-    if (gps.location.isValid() == true && display_gps == true) Display.writeStr("utctime.txt", String(gps.time.hour()) + ":" + (gps.time.minute() < 10 ? "0" : "") + String(gps.time.minute()) + ":" + (gps.time.second() < 10 ? "0" : "") + String(gps.time.second()));
+    if (gps.location.isValid() && display_gps) Display.writeStr("utctime.txt", String(gps.time.hour()) + ":" + (gps.time.minute() < 10 ? "0" : "") + String(gps.time.minute()) + ":" + (gps.time.second() < 10 ? "0" : "") + String(gps.time.second()));
   }
 }
 
 void buzzer(byte times) {
-  if (beeper == true) {
+  if (beeper) {
     for (int x = -1; x < times; x++) {
       digitalWrite(33, HIGH);
       delay(100);
@@ -1888,114 +1891,6 @@ void defaults() {
   EEPROM.writeInt(42, 0);
   EEPROM.commit();
   trigger7();
-}
-
-void Provinciecall() {
-  WiFiClientSecure http;
-  HTTPClient https;
-  http.setInsecure();
-  http.setTimeout(2000);
-  if (http.connect("api.pdok.nl", 443)) {
-    https.begin(http, "api.pdok.nl", 443, "/bzk/locatieserver/search/v3_1/free?q=" + plaats + "&lat=" + String(latitude, 2) + "&lon=" + String(longitude, 2) + "&rows=1");
-    int httpCode = https.GET();
-    if (httpCode == HTTP_CODE_OK) {
-      DynamicJsonDocument jsonDocument(JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(13) + 1024);
-      DeserializationError error = deserializeJson(jsonDocument, https.getString());
-      if (error) {
-        Serial.println("Provincie: Failed to parse JSON response");
-      } else {
-        JsonObject response = jsonDocument["response"];
-        if (response.containsKey("docs")) {
-          JsonArray docs = response["docs"];
-          if (docs.size() > 0 && docs[0].containsKey("provincienaam") && docs[0].containsKey("gemeentenaam")) {
-            provincie = docs[0]["provincienaam"].as<String>();
-            provincie_short = docs[0]["provincieafkorting"].as<String>();
-            String gemeente = docs[0]["gemeentenaam"].as<String>();
-
-            if (gemeente.equals("Texel") || gemeente.equals("Vlieland") || gemeente.equals("Terschelling") || gemeente.equals("Ameland") || gemeente.equals("Schiermonnikoog")) {
-              provincie = "Waddeneilanden";
-            } else if (provincie.equals("Fryslân")) {
-              provincie = "Friesland";
-            }
-          } else {
-            Serial.println("Provincie: Invalid response format or missing 'provincienaam' or 'gemeentenaam' key");
-          }
-        } else {
-          Serial.println("Provincie: Invalid response format or missing 'docs' key");
-        }
-      }
-    } else {
-      Serial.println("Provincie: Failed to make HTTP request. Error code: " + String(httpCode));
-    }
-    https.end();
-  } else {
-    Serial.println("Provincie: Failed to establish a connection to the server");
-  }
-}
-
-void knmiweeralarm() {
-  WiFiClientSecure http;
-  http.setTimeout(2000);
-  http.setInsecure();
-  String phpData;
-  char client_buffer[128];
-  int bytesRead;
-
-  if (http.connect("arduino.reshift.nl", 443)) {
-    Serial.println("Weeralarm ophalen");
-    String lowercaseProvincie = "";
-    for (int i = 0; i < provincie.length(); i++) {
-      lowercaseProvincie += char(tolower(provincie.charAt(i)));
-    }
-    http.print("GET /weeralarm.php?regio=" + lowercaseProvincie + " HTTP/1.1\r\n");
-    http.print("Host: arduino.reshift.nl\r\n");
-    http.print("Connection: close\r\n");
-    http.print("\r\n");
-
-    int httpCode = http.connected() ? 200 : 0;
-    if (httpCode == 200) {
-      char endOfHeaders[] = "\r\n\r\n";
-
-      while (http.connected() && (bytesRead = http.readBytes(client_buffer, sizeof(client_buffer))) > 0) {
-        phpData += String(client_buffer).substring(0, bytesRead);
-      }
-
-      int dashPosition = phpData.indexOf("--");
-      if (dashPosition != -1) {
-        String statusValue = phpData.substring(dashPosition + 2);
-
-        if (statusValue.indexOf("green") != -1) {
-          weercode = "groen";
-          weeralarm = false;
-          if (display_weather == true) Display.writeNum("weercode.pic", 69);
-        } else if (statusValue.indexOf("yellow") != -1) {
-          weercode = "geel";
-          weeralarm = true;
-          if (display_weather == true) Display.writeNum("weercode.pic", 70);
-        } else if (statusValue.indexOf("orange") != -1) {
-          if (display_weather == true) Display.writeNum("weercode.pic", 71);
-          weercode = "oranje";
-          weeralarm = true;
-        } else if (statusValue.indexOf("red") != -1) {
-          if (display_weather == true) Display.writeNum("weercode.pic", 72);
-          weercode = "rood";
-          weeralarm = true;
-        } else {
-          weercode = "Onbekend";
-          weeralarm = false;
-        }
-
-        Serial.println("Weeralarm kleur: " + weercode);
-      } else {
-        Serial.println("Weeralarm: Unable to find status value in the response");
-      }
-    } else {
-      Serial.println("Weeralarm: Unexpected HTTP code: " + String(httpCode));
-    }
-  } else {
-    Serial.println("Weeralarm: Failed to connect to server");
-  }
-  http.stop();
 }
 
 void buienradar() {
