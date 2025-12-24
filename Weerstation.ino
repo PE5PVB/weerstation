@@ -1057,7 +1057,7 @@ void getWeather() {
   windr = live["windr"] | "";                       // Windrichting
   winds = live["windbft"] | 0;                      // Windkracht (Beaufort)
   windkmh = int(live["windkmh"].as<float>() * 10);  // Windsnelheid km/h ×10
-  windms = int(live["windms"].as<float>() * 10);    // Windsnelheid m/s
+  windms = int(live["windms"].as<float>() * 10);    // Windsnelheid m/s x10
   luchtd = int(live["luchtd"].as<float>() * 10);    // Luchtdruk ×10
   zicht = live["zicht"] | 0;                        // Zicht in meters
   verw = live["verw"] | "";                         // Verwachting tekst
