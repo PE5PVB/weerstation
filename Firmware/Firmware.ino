@@ -2,17 +2,16 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
-#include "WiFiConnect.h"
-#include <ArduinoJson.h>
-#include <TinyGPS++.h>
-#include <SoftwareSerial.h>
-#include <maidenhead.h>
 #include <EEPROM.h>
-#include <WiFiConnectParam.h>
-#include <DFRobot_SGP40.h>
-#include "src/AS3935_ESP32.h"                   // AS3935 library geoptimaliseerd voor ESP32
-#include "DHT.h"                              // https://github.com/adafruit/DHT-sensor-library
-#include <EasyNextionLibrary.h>               // https://github.com/Seithan/EasyNextionLibrary
+#include "src/AS3935_ESP32.h"
+#include "src/WiFiConnect.h"
+#include <ArduinoJson.h>                        // https://github.com/bblanchon/ArduinoJson
+#include <TinyGPS++.h>                          // https://github.com/mikalhart/TinyGPSPlus
+#include <SoftwareSerial.h>                     // https://github.com/plerup/espsoftwareserial
+#include <maidenhead.h>                         // https://github.com/sp6hfe/Maidenhead
+#include <DFRobot_SGP40.h>                      // https://github.com/DFRobot/DFRobot_SGP40
+#include "DHT.h"                                // https://github.com/adafruit/DHT-sensor-library
+#include <EasyNextionLibrary.h>                 // https://github.com/Seithan/EasyNextionLibrary
 
 #define SOFTWAREVERSION 15
 
@@ -254,7 +253,6 @@ void setup(void) {
   Display.writeStr("info.txt", "Verbinden met WiFi...");
   Serial.print("WiFi verbinding opbouwen.....");
   if (wc.autoConnect()) {
-    WiFi.begin();
     Serial.println("WiFi verbonden");
     Display.writeStr("status.txt", "OK!");
     wifistatus = true;
@@ -338,24 +336,15 @@ void loop(void) {
       showRSSI();
       if (display_weather) {
         if (WiFi.status() != WL_CONNECTED) {
-          Serial.println("WiFi connection lost. Reconnecting...");
-          wifistatus = false;
-          Display.writeStr("tsw b_radio,0");
-          Display.writeStr("tsw m0,0");
-          Display.writeStr("tsw m1,0");
-          Display.writeStr("tsw m2,0");
-          Display.writeStr("tsw m3,0");
-          Display.writeStr("tsw m4,0");
-          Display.writeNum("rssi", 0);
-          while (!wifistatus) {
-            if (wc.autoConnect()) wifistatus = true;
+          if (wifistatus) {
+            Serial.println("WiFi connection lost. Reconnecting...");
+            wifistatus = false;
+            WiFi.reconnect();
+            Display.writeNum("rssi", 0);
           }
-          Display.writeStr("tsw b_radio,1");
-          Display.writeStr("tsw m0,1");
-          Display.writeStr("tsw m1,1");
-          Display.writeStr("tsw m2,1");
-          Display.writeStr("tsw m3,1");
-          Display.writeStr("tsw m4,1");
+        } else if (!wifistatus) {
+          Serial.println("WiFi verbonden");
+          wifistatus = true;
         }
       }
       getIndoor();
@@ -827,7 +816,7 @@ void setWifi() {
   wc.addParameter(&api_key_text);
   wc.addParameter(&api_key_input);
 
-  wc.startConfigurationPortal(AP_WAIT);
+  wc.startConfigurationPortal();
   Serial.println("Ontvangen waarde: ");
   Serial.println(api_key_input.getValue());
   EEPROM.writeString(17, String(api_key_input.getValue()));
