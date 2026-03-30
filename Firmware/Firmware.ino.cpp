@@ -1,3 +1,6 @@
+# 1 "C:\\Users\\pe5pv\\AppData\\Local\\Temp\\tmp3q5k3b4e"
+#include <Arduino.h>
+# 1 "C:/Users/pe5pv/OneDrive - Vereniging van Radio Zendamateurs/GitHub/weerstation/Firmware/Firmware.ino"
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -7,17 +10,17 @@
 #include "src/AS3935_ESP32.h"
 #include "src/maidenhead.h"
 #include "src/WiFiConnect.h"
-#include <ArduinoJson.h>                        // https://github.com/bblanchon/ArduinoJson
-#include <TinyGPS++.h>                          // https://github.com/mikalhart/TinyGPSPlus
-#include <SoftwareSerial.h>                     // https://github.com/plerup/espsoftwareserial
-#include <DFRobot_SGP40.h>                      // https://github.com/DFRobot/DFRobot_SGP40
-#include "DHT.h"                                // https://github.com/adafruit/DHT-sensor-library
-#include <EasyNextionLibrary.h>                 // https://github.com/Seithan/EasyNextionLibrary
+#include <ArduinoJson.h>
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include <DFRobot_SGP40.h>
+#include "DHT.h"
+#include <EasyNextionLibrary.h>
 
 #define SOFTWAREVERSION 15
 
-// Nederlandse tijdzone: CET (UTC+1) met zomertijd CEST (UTC+2)
-// M3.5.0/2 = laatste zondag maart om 02:00, M10.5.0/3 = laatste zondag oktober om 03:00
+
+
 #define NL_TIMEZONE "CET-1CEST,M3.5.0/2,M10.5.0/3"
 
 WiFiConnect wc;
@@ -199,7 +202,41 @@ unsigned long time_4 = 0;
 unsigned long time_5 = 0;
 unsigned long time_6 = 0;
 const int intPin = 19;
-
+void setup(void);
+void loop(void);
+void setLightning();
+void trigger1();
+void trigger2();
+void trigger3();
+void trigger4();
+void trigger5();
+void trigger6();
+void trigger7();
+void trigger8();
+void trigger9();
+void trigger10();
+void trigger11();
+void trigger12();
+void trigger13();
+void trigger14();
+void ResetScreenData();
+void showRSSI();
+void setWifi();
+void getPropagation();
+byte imageFromString(String img);
+void getWeather();
+void getMUF(void);
+void showData(void);
+void buildMUFticker();
+void showGPS();
+void getIndoor();
+void getGPS();
+void FormatTime();
+void buzzer(byte times);
+void defaults();
+void buienradar();
+int splitString(const String& input, char delimiter, String* output, int maxItems);
+#line 203 "C:/Users/pe5pv/OneDrive - Vereniging van Radio Zendamateurs/GitHub/weerstation/Firmware/Firmware.ino"
 void setup(void) {
   pinMode(2, OUTPUT);
   pinMode(33, OUTPUT);
@@ -230,7 +267,7 @@ void setup(void) {
   Display.writeNum("tm0.en", 0);
   Display.writeStr("version.txt", ("v " + String(SOFTWAREVERSION / 10) + "." + String(SOFTWAREVERSION % 10)));
 
-  // Lightning sensor EERST calibreren, vóór WiFi (WiFi-radio verstoort de AS3935)
+
   Wire.begin();
   Display.writeStr("info.txt", "Lightning sensor");
   Display.writeStr("status.txt", " ");
@@ -248,7 +285,7 @@ void setup(void) {
   }
   delay(1000);
 
-  // WiFi verbinding opbouwen (na lightning calibratie)
+
   Display.writeStr("info.txt", "Verbinden met WiFi...");
   Display.writeStr("status.txt", " ");
   Serial.print("WiFi verbinding opbouwen.....");
@@ -308,7 +345,7 @@ void setup(void) {
   showData();
   buienradar();
 
-  // Watchdog timer: herstart ESP32 als loop() langer dan 30s blokkeert
+
   esp_task_wdt_init(30, true);
   esp_task_wdt_add(NULL);
 }
@@ -320,23 +357,23 @@ void loop(void) {
   getGPS();
 
   if (!menu) {
-    if (millis() - time_1 >= 600000) {   // 10 minuten (hamqsl.com update ~15 min)
+    if (millis() - time_1 >= 600000) {
       time_1 = millis();
       getPropagation();
     }
 
-    if (millis() - time_2 >= 600000) {   // 10 minuten (MUF data update per kwartier)
+    if (millis() - time_2 >= 600000) {
       time_2 = millis();
       getMUF();
     }
 
-    if (millis() - time_3 >= 300000) {   // 5 minuten
+    if (millis() - time_3 >= 300000) {
       time_3 = millis();
       getWeather();
       buienradar();
     }
 
-    if (millis() - time_4 >= 5000) {     // 5 seconden
+    if (millis() - time_4 >= 5000) {
       time_4 = millis();
       showRSSI();
       if (display_weather) {
@@ -356,7 +393,7 @@ void loop(void) {
       showData();
       showGPS();
 
-      // Heap monitoring — herstart bij kritieke fragmentatie
+
       uint32_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
       if (largestBlock < 60000) {
         Serial.printf("Heap kritiek: grootste blok %d bytes, herstart!\n", largestBlock);
@@ -364,7 +401,7 @@ void loop(void) {
       }
     }
 
-    if (millis() - time_6 >= 600000) {   // 10 minuten
+    if (millis() - time_6 >= 600000) {
       time_6 = millis();
       beeper_lightning = false;
       if (!weeralarm) {
@@ -372,7 +409,7 @@ void loop(void) {
       }
     }
 
-    if (millis() - time_5 >= 300000) {   // 5 minuten auto-dimmer
+    if (millis() - time_5 >= 300000) {
       if (autodim) Display.writeStr("dim=3");
       time_5 = millis();
     }
@@ -440,7 +477,7 @@ void setLightning() {
   Serial.println("Lightning noise level set to: " + String(lightning.readNoiseLevel()));
 }
 
-void trigger1() {   // Weather view
+void trigger1() {
   if (currenttrigger != 1) {
     Display.writeNum("dim", contrast);
     time_5 = millis();
@@ -457,7 +494,7 @@ void trigger1() {   // Weather view
   }
 }
 
-void trigger2() {   // Radio view
+void trigger2() {
   if (currenttrigger != 2) {
     Display.writeNum("dim", contrast);
     time_5 = millis();
@@ -470,7 +507,7 @@ void trigger2() {   // Radio view
   }
 }
 
-void trigger3() {   // GPS view
+void trigger3() {
   if (currenttrigger != 3) {
     Display.writeNum("dim", contrast);
     time_5 = millis();
@@ -484,7 +521,7 @@ void trigger3() {   // GPS view
   }
 }
 
-void trigger4() {   // Config1 view
+void trigger4() {
   if (currenttrigger != 4) {
     menu = true;
     Display.writeNum("dim", contrast);
@@ -511,7 +548,7 @@ void trigger4() {   // Config1 view
   }
 }
 
-void trigger5() {   // Config1 afsluiten
+void trigger5() {
   if (currenttrigger != 5) {
     Display.writeNum("dim", contrast);
     time_5 = millis();
@@ -562,7 +599,7 @@ void trigger5() {   // Config1 afsluiten
   }
 }
 
-void trigger6() {    // Update locatie
+void trigger6() {
   Display.writeNum("dim", contrast);
   time_5 = millis();
   if (Display.readNumber("b_radio.pic") == 50) {
@@ -574,7 +611,7 @@ void trigger6() {    // Update locatie
   showData();
 }
 
-void trigger7() {   // WiFi configuratiescherm
+void trigger7() {
   if (currenttrigger != 7) {
     Display.writeNum("dim", contrast);
     time_5 = millis();
@@ -587,7 +624,7 @@ void trigger7() {   // WiFi configuratiescherm
   }
 }
 
-void trigger8() {   // WiFi retry
+void trigger8() {
   if (currenttrigger != 8) {
     if (wc.autoConnect()) {
       wifistatus = true;
@@ -598,7 +635,7 @@ void trigger8() {   // WiFi retry
   }
 }
 
-void trigger9() {   // Warning view
+void trigger9() {
   if (currenttrigger != 9) {
     Display.writeNum("dim", contrast);
     time_5 = millis();
@@ -612,14 +649,14 @@ void trigger9() {   // Warning view
   }
 }
 
-void trigger10() {   // Warning afsluiten
+void trigger10() {
   if (currenttrigger != 10) {
     currenttrigger = 10;
     trigger1();
   }
 }
 
-void trigger11() {  // Config 3 afsluiten
+void trigger11() {
   if (currenttrigger != 11) {
     Display.writeNum("dim", contrast);
     time_5 = millis();
@@ -664,7 +701,7 @@ void trigger13() {
   buzzer(1);
 }
 
-void trigger14() {  // Config 2 afsluiten
+void trigger14() {
   if (currenttrigger != 14) {
     Display.writeNum("dim", contrast);
     time_5 = millis();
@@ -807,11 +844,11 @@ void showRSSI()
   if (rssi != rssiold) {
     rssiold = rssi;
     byte level;
-    if (rssi == 0)        level = 0;
-    else if (rssi > -50)  level = 4;
-    else if (rssi > -60)  level = 3;
-    else if (rssi > -70)  level = 2;
-    else                  level = 1;
+    if (rssi == 0) level = 0;
+    else if (rssi > -50) level = 4;
+    else if (rssi > -60) level = 3;
+    else if (rssi > -70) level = 2;
+    else level = 1;
     Display.writeNum("rssi", level);
   }
 }
@@ -845,67 +882,67 @@ void getPropagation() {
     String xmlContent = http.getString();
     int startPos, endPos;
 
-    // Solar Flux
+
     startPos = xmlContent.indexOf("<solarflux>") + 11;
     endPos = xmlContent.indexOf("</solarflux>");
     solarflux = xmlContent.substring(startPos, endPos);
 
-    // A Index
+
     startPos = xmlContent.indexOf("<aindex>") + 8;
     endPos = xmlContent.indexOf("</aindex>");
     aindex = xmlContent.substring(startPos, endPos);
 
-    // K Index
+
     startPos = xmlContent.indexOf("<kindex>") + 8;
     endPos = xmlContent.indexOf("</kindex>");
     kindex = xmlContent.substring(startPos, endPos);
 
-    // Sunspots
+
     startPos = xmlContent.indexOf("<sunspots>") + 10;
     endPos = xmlContent.indexOf("</sunspots>");
     sunspots = xmlContent.substring(startPos, endPos);
 
-    // Proton Flux
+
     startPos = xmlContent.indexOf("<protonflux>") + 12;
     endPos = xmlContent.indexOf("</protonflux>");
     protonflux = xmlContent.substring(startPos, endPos);
 
-    // Electon Flux
+
     startPos = xmlContent.indexOf("<electonflux>") + 13;
     endPos = xmlContent.indexOf("</electonflux>");
     electonflux = xmlContent.substring(startPos, endPos);
 
-    // Aurora
+
     startPos = xmlContent.indexOf("<aurora>") + 8;
     endPos = xmlContent.indexOf("</aurora>");
     aurora = xmlContent.substring(startPos, endPos);
 
-    // normalisation
+
     startPos = xmlContent.indexOf("<normalization>") + 15;
     endPos = xmlContent.indexOf("</normalization>");
     normalisation = xmlContent.substring(startPos, endPos);
 
-    // Latdegree
+
     startPos = xmlContent.indexOf("<latdegree>") + 11;
     endPos = xmlContent.indexOf("</latdegree>");
     latdegree = xmlContent.substring(startPos, endPos);
 
-    // Solar Wind
+
     startPos = xmlContent.indexOf("<solarwind>") + 11;
     endPos = xmlContent.indexOf("</solarwind>");
     solarwind = xmlContent.substring(startPos, endPos);
 
-    // Magnetic Field
+
     startPos = xmlContent.indexOf("<magneticfield>") + 15;
     endPos = xmlContent.indexOf("</magneticfield>");
     magneticfield = xmlContent.substring(startPos, endPos);
 
-    // Calculated Conditions for Bands
+
     startPos = xmlContent.indexOf("<calculatedconditions>");
     endPos = xmlContent.indexOf("</calculatedconditions>");
     String bandConditions = xmlContent.substring(startPos, endPos);
 
-    // Extract band information using a loop
+
     int bandStartPos = 0;
     int bandEndPos = 0;
     String dayBandName, nightBandName, bandName, bandTime, bandStatus;
@@ -913,7 +950,7 @@ void getPropagation() {
     while (true) {
       bandStartPos = bandConditions.indexOf("<band", bandEndPos);
       if (bandStartPos == -1) {
-        break; // No more bands found, exit the loop
+        break;
       }
 
       bandStartPos = bandConditions.indexOf("name=\"", bandStartPos) + 6;
@@ -928,14 +965,14 @@ void getPropagation() {
       bandEndPos = bandConditions.indexOf("</band>", bandStartPos);
       bandStatus = bandConditions.substring(bandStartPos, bandEndPos);
 
-      // Check the value of bandTime and assign bandName to the appropriate variable
+
       if (bandTime.equals("day")) {
         dayBandName = bandName;
       } else if (bandTime.equals("night")) {
         nightBandName = bandName;
       }
 
-      // Assign the band status to the appropriate variable based on bandName and bandTime
+
       if (bandName.equals("12m-10m") && bandTime.equals("day")) {
         d1210m = bandStatus;
       } else if (bandName.equals("17m-15m") && bandTime.equals("day")) {
@@ -955,12 +992,12 @@ void getPropagation() {
       }
     }
 
-    // Separating Calculated VHF Conditions
+
     startPos = xmlContent.indexOf("<calculatedvhfconditions>");
     endPos = xmlContent.indexOf("</calculatedvhfconditions>");
     String vhfConditions = xmlContent.substring(startPos, endPos);
 
-    // Extract phenomenon information using a loop for Europe location
+
     int phenomenonStartPos = 0;
     int phenomenonEndPos = 0;
     String phenomenonName, phenomenonLocation, phenomenonStatus;
@@ -968,7 +1005,7 @@ void getPropagation() {
     while (true) {
       phenomenonStartPos = vhfConditions.indexOf("<phenomenon", phenomenonEndPos);
       if (phenomenonStartPos == -1) {
-        break; // No more phenomena found, exit the loop
+        break;
       }
 
       phenomenonStartPos = vhfConditions.indexOf("name=\"", phenomenonStartPos) + 6;
@@ -983,7 +1020,7 @@ void getPropagation() {
       phenomenonEndPos = vhfConditions.indexOf("</phenomenon>", phenomenonStartPos);
       phenomenonStatus = vhfConditions.substring(phenomenonStartPos, phenomenonEndPos);
 
-      // Assign the phenomenon status to the appropriate variable based on phenomenonName and phenomenonLocation
+
       if (phenomenonLocation.equals("europe") && phenomenonName.equals("E-Skip")) {
         es2m = phenomenonStatus;
       } else if (phenomenonLocation.equals("europe_4m") && phenomenonName.equals("E-Skip")) {
@@ -993,12 +1030,12 @@ void getPropagation() {
       }
     }
 
-    // Geomag field
+
     startPos = xmlContent.indexOf("<geomagfield>") + 13;
     endPos = xmlContent.indexOf("</geomagfield>");
     geomagfield = xmlContent.substring(startPos, endPos);
 
-    // Signalnoise
+
     startPos = xmlContent.indexOf("<signalnoise>") + 13;
     endPos = xmlContent.indexOf("</signalnoise>");
     signalnoise = xmlContent.substring(startPos, endPos);
@@ -1027,72 +1064,72 @@ byte imageFromString(String img) {
 }
 
 void getWeather() {
-  // --- Setup HTTPS client ---
+
   WiFiClientSecure http;
   HTTPClient https;
-  http.setInsecure();       // Niet verifiëren van certificaat (voor hobbyprojecten)
-  http.setTimeout(2000);    // Timeout 2 seconden voor connecties
+  http.setInsecure();
+  http.setTimeout(2000);
 
-  // --- Bouw de request URL ---
+
   String request = "/api/weerlive_api_v2.php?key=" + key + "&locatie=" + String(latitude, 6) + "," + String(longitude, 6);
 
-  // --- Verbinden met server ---
-  if (!http.connect("weerlive.nl", 443)) return;  // Stop als connectie mislukt
+
+  if (!http.connect("weerlive.nl", 443)) return;
 
   https.begin(http, "weerlive.nl", 443, request);
   int httpCode = https.GET();
-  if (httpCode != HTTP_CODE_OK) {                   // HTTP check
+  if (httpCode != HTTP_CODE_OK) {
     https.end();
     return;
   }
 
-  // --- JSON payload streamen en parsen (geen tussenopslag als String) ---
-  // Filter: alleen liveweer en wk_verw parsen, uur_verw overslaan (bespaart geheugen)
+
+
   StaticJsonDocument<200> filter;
   filter["liveweer"][0] = true;
   filter["wk_verw"] = true;
 
   DynamicJsonDocument weer(4096);
   DeserializationError error = deserializeJson(weer, https.getStream(), DeserializationOption::Filter(filter));
-  if (error) {                                      // Stop bij JSON fout
+  if (error) {
     https.end();
     return;
   }
 
-  // --- Liveweer object ---
+
   JsonObject live = weer["liveweer"][0];
-  JsonArray wk_verw = weer["wk_verw"];              // Weekverwachting array
+  JsonArray wk_verw = weer["wk_verw"];
 
-  // --- Basis live-weer gegevens ---
-  plaats = live["plaats"] | "";                     // Plaatsnaam
-  temp = int(live["temp"].as<float>() * 10);        // Temperatuur ×10 (int)
-  samenv = live["samenv"] | "";                     // Samenvatting
-  lv = live["lv"] | 0;                              // Luchtvochtigheid in %
-  dauw = int(live["dauwp"].as<float>() * 10);       // Dauwpunt ×10 (int)
-  windr = live["windr"] | "";                       // Windrichting
-  winds = live["windbft"] | 0;                      // Windkracht (Beaufort)
-  windkmh = int(live["windkmh"].as<float>() * 10);  // Windsnelheid km/h ×10
-  windms = int(live["windms"].as<float>() * 10);    // Windsnelheid m/s x10
-  luchtd = int(live["luchtd"].as<float>() * 10);    // Luchtdruk ×10
-  zicht = live["zicht"] | 0;                        // Zicht in meters
-  verw = live["verw"] | "";                         // Verwachting tekst
-  zonop = live["sup"] | "";                         // Zonopkomst tijd
-  zononder = live["sunder"] | "";                   // Zonsondergang tijd
-  alarmtxt = live["ltekst"] | "";                   // Eventuele waarschuwingstekst
 
-  // --- Weeralarm en code ---
-  weercode = live["wrschklr"] | "groen";            // Tekstcode van weeralarm ("groen", "geel", "oranje", "rood")
-  weeralarm = (weercode != "groen");                // true indien niet groen
+  plaats = live["plaats"] | "";
+  temp = int(live["temp"].as<float>() * 10);
+  samenv = live["samenv"] | "";
+  lv = live["lv"] | 0;
+  dauw = int(live["dauwp"].as<float>() * 10);
+  windr = live["windr"] | "";
+  winds = live["windbft"] | 0;
+  windkmh = int(live["windkmh"].as<float>() * 10);
+  windms = int(live["windms"].as<float>() * 10);
+  luchtd = int(live["luchtd"].as<float>() * 10);
+  zicht = live["zicht"] | 0;
+  verw = live["verw"] | "";
+  zonop = live["sup"] | "";
+  zononder = live["sunder"] | "";
+  alarmtxt = live["ltekst"] | "";
 
-  // --- Image mapping (weericoon) ---
+
+  weercode = live["wrschklr"] | "groen";
+  weeralarm = (weercode != "groen");
+
+
   image = imageFromString(live["image"] | "");
 
-  // --- Dagelijkse temperaturen en wind ---
-  if (wk_verw.size() > 0) {  // Vandaag
+
+  if (wk_verw.size() > 0) {
     d0tmin = int(wk_verw[0]["min_temp"].as<int>());
     d0tmax = int(wk_verw[0]["max_temp"].as<int>());
   }
-  if (wk_verw.size() > 1) {  // Morgen
+  if (wk_verw.size() > 1) {
     d1tmin = int(wk_verw[1]["min_temp"].as<int>());
     d1tmax = int(wk_verw[1]["max_temp"].as<int>());
     d1windk = wk_verw[1]["windbft"] | 0;
@@ -1101,7 +1138,7 @@ void getWeather() {
     d1neerslag = wk_verw[1]["neersl_perc_dag"] | 0;
     d1image = imageFromString(wk_verw[1]["image"] | "") + 15;
   }
-  if (wk_verw.size() > 2) {  // Overmorgen
+  if (wk_verw.size() > 2) {
     d2tmin = int(wk_verw[2]["min_temp"].as<int>());
     d2tmax = int(wk_verw[2]["max_temp"].as<int>());
     d2windk = wk_verw[2]["windbft"] | 0;
@@ -1111,84 +1148,84 @@ void getWeather() {
     d2image = imageFromString(wk_verw[2]["image"] | "") + 15;
   }
 
-  // --- Windrichting verkorten ---
+
   if (windr == "Noord") windr = "N";
   else if (windr == "Oost") windr = "O";
   else if (windr == "Zuid") windr = "Z";
   else if (windr == "West") windr = "W";
 
-  https.end(); // Sluit HTTP client netjes af
+  https.end();
 }
 
 void getMUF(void) {
   HTTPClient http;
 
-  // Stel een timeout in van 2000 ms
+
   http.setTimeout(2000);
 
   String url = "http://ionosphere.meteo.be/ionosphere/MUF/latest-MUF-DB049.php";
 
-  // Start HTTP-verbinding, controleer of dit lukt
+
   if (!http.begin(url)) {
     Serial.println("HTTP begin failed");
     return;
   }
 
-  // Voer GET-request uit
+
   int httpCode = http.GET();
 
   if (httpCode == HTTP_CODE_OK) {
-    // Haal de response op als String
+
     String payload = http.getString();
 
-    // Zoek de start van de data door "MUF(MHz)" te vinden
+
     int startIndex = payload.indexOf("MUF(MHz)");
     if (startIndex != -1) {
-      // Ga naar de volgende regel na de koptekst
+
       int lineEnd = payload.indexOf('\n', startIndex);
       String mufData = payload.substring(lineEnd + 1);
 
       int lineCount = 0;
 
-      // Verwerk maximaal 9 lijnen (voor muf_string[9])
+
       while (lineCount < 9) {
         int nextLine = mufData.indexOf('\n');
-        if (nextLine == -1) break; // geen lijnen meer beschikbaar
+        if (nextLine == -1) break;
 
-        // Haal de huidige regel
+
         String line = mufData.substring(0, nextLine);
-        line.trim(); // verwijder voor- en achterliggende spaties
+        line.trim();
 
-        // Controleer dat de regel lang genoeg is om MUF-waarde te bevatten
+
         if (line.length() > 5) {
-          // Verwijder de eerste 4 cijfers + spatie (ID/celnummer)
+
           muf_string[lineCount] = line.substring(5);
         } else {
-          // Als lijn te kort is, fallback naar "0"
+
           muf_string[lineCount] = "0";
         }
 
-        // Verwijder de verwerkte lijn uit de data
+
         mufData = mufData.substring(nextLine + 1);
         lineCount++;
       }
     } else {
       Serial.println("MUF header niet gevonden!");
-      // Fallback: vul array met "0" als koptekst niet gevonden wordt
+
       for (int i = 0; i < 9; i++) {
         muf_string[i] = "0";
       }
     }
   } else {
-    // GET-request mislukt, log error code
+
     Serial.printf("HTTP GET mislukt. Code: %d\n", httpCode);
-    // Fallback: vul array met "0"
+
     for (int i = 0; i < 9; i++) {
       muf_string[i] = "0";
     }
   }
 
-  // Sluit de HTTP-verbinding
+
   http.end();
 }
 
@@ -1784,15 +1821,15 @@ void getGPS() {
     }
     if (!ntp) {
       if (gps.time.isValid() && gps.date.isValid()) {
-        // GPS levert UTC — stel systeemklok in via settimeofday
+
         struct tm gpsUtc = {};
         gpsUtc.tm_year = gps.date.year() - 1900;
-        gpsUtc.tm_mon  = gps.date.month() - 1;
+        gpsUtc.tm_mon = gps.date.month() - 1;
         gpsUtc.tm_mday = gps.date.day();
         gpsUtc.tm_hour = gps.time.hour();
-        gpsUtc.tm_min  = gps.time.minute();
-        gpsUtc.tm_sec  = gps.time.second();
-        // mktime interpreteert als lokale tijd, corrigeer met tijdzone-offset
+        gpsUtc.tm_min = gps.time.minute();
+        gpsUtc.tm_sec = gps.time.second();
+
         time_t epoch = mktime(&gpsUtc);
         struct tm *check = localtime(&epoch);
         epoch -= (mktime(check) - mktime(gmtime(&epoch)));
@@ -1800,13 +1837,13 @@ void getGPS() {
         settimeofday(&tv, NULL);
       }
     }
-    // NTP modus: configTzTime regelt synchronisatie automatisch
+
   }
   FormatTime();
 }
 
 void FormatTime() {
-  // localtime() past automatisch CET/CEST toe via configTzTime
+
   time_t now = time(NULL);
   struct tm *t = localtime(&now);
 
@@ -1815,8 +1852,8 @@ void FormatTime() {
   const char* maanden[] = {"jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"};
 
   String dayname = dagen[t->tm_wday];
-  String dayname1 = dagen_kort[(t->tm_wday + 1) % 7]; // Morgen
-  String dayname2 = dagen_kort[(t->tm_wday + 2) % 7]; // Overmorgen
+  String dayname1 = dagen_kort[(t->tm_wday + 1) % 7];
+  String dayname2 = dagen_kort[(t->tm_wday + 2) % 7];
   String monthname = maanden[t->tm_mon];
 
   char tijdbuf[40];
@@ -1945,4 +1982,3 @@ int splitString(const String& input, char delimiter, String* output, int maxItem
 
   return itemCount;
 }
-
