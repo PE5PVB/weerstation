@@ -11,13 +11,12 @@
 #include <EEPROM.h>
 #include <WiFiConnectParam.h>
 #include <DFRobot_SGP40.h>
-#include "SparkFun_AS3935.h"                  // https://github.com/sparkfun/SparkFun_AS3935_Lightning_Detector_Arduino_Library
+#include "src/AS3935_ESP32.h"
 #include "DHT.h"                              // https://github.com/adafruit/DHT-sensor-library
 #include <EasyNextionLibrary.h>               // https://github.com/Seithan/EasyNextionLibrary
 #include <Timezone.h>                         // https://github.com/JChristensen/Timezone
 #include <NTPClient.h>                        // https://github.com/arduino-libraries/NTPClient
 
-#define MAX_FLOAT_VALUE 3.402823466e+38F
 #define SOFTWAREVERSION 15
 
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};
@@ -31,7 +30,7 @@ SoftwareSerial ss(12, 13);
 WiFiUDP ntpUDP;
 NTPClient NTPtimeClient(ntpUDP, "europe.pool.ntp.org");
 DFRobot_SGP40 mySgp40;
-SparkFun_AS3935 lightning(0x03);
+AS3935_ESP32 lightning(AS3935_ADDR_DEFAULT);
 
 bool beeper;
 bool beeper_alarm = false;
@@ -155,10 +154,10 @@ String kindexold;
 String latdegree;
 String latdegreeold;
 String latitudeold;
-String lightningtext[7];
+String lightningtext[6];
 String lightningtextmerge = "Geen meldingen";
 String lightningtextmergeold;
-String lightningtextold[7];
+String lightningtextold[6];
 String longitudeold;
 String magneticfield;
 String magneticfieldold;
@@ -236,6 +235,26 @@ void setup(void) {
   Display.writeStr("page 0");
   Display.writeNum("tm0.en", 0);
   Display.writeStr("version.txt", ("v " + String(SOFTWAREVERSION / 10) + "." + String(SOFTWAREVERSION % 10)));
+
+  // Lightning sensor EERST calibreren, vóór WiFi (WiFi-radio verstoort de AS3935)
+  Wire.begin();
+  Display.writeStr("info.txt", "Lightning sensor");
+  Display.writeStr("status.txt", " ");
+  if (!lightning.begin(intPin)) {
+    Serial.println("Geen Lightning sensor");
+    Display.writeStr("status.txt", "FOUT!");
+  } else {
+    Serial.println("Lightning sensor OK");
+    Display.writeStr("status.txt", "OK!");
+    AS3935_TuneResult tune = lightning.tuneAntenna();
+    if (!tune.success) {
+      Serial.println("Antenne calibratie mislukt!");
+    }
+    setLightning();
+  }
+  delay(1000);
+
+  // WiFi verbinding opbouwen (na lightning calibratie)
   Display.writeStr("info.txt", "Verbinden met WiFi...");
   Serial.print("WiFi verbinding opbouwen.....");
   if (wc.autoConnect()) {
@@ -279,19 +298,6 @@ void setup(void) {
   } else {
     Serial.println("VOC sensor OK");
     Display.writeStr("status.txt", "OK!");
-  }
-  delay(1000);
-  Wire.begin();
-  Display.writeStr("info.txt", "Lightning sensor");
-  Display.writeStr("status.txt", " ");
-  if (!lightning.begin()) {
-    Serial.println("Geen Lightning sensor");
-    Display.writeStr("status.txt", "FOUT!");
-  } else {
-    Serial.println("Lightning sensor OK");
-    Display.writeStr("status.txt", "OK!");
-    tuneAntenna();
-    setLightning();
   }
   delay(1000);
   if (radio == 1) Display.writeNum("radiobutton", 1);
@@ -406,14 +412,10 @@ void loop(void) {
               time_6 += 600000;
               Display.writeNum("b_alarm.pic", 49);
             }
-            if (lightningcount > 6) {
-              lightningtext[0] = lightningtext[1];
-              lightningtext[1] = lightningtext[2];
-              lightningtext[2] = lightningtext[3];
-              lightningtext[3] = lightningtext[4];
-              lightningtext[4] = lightningtext[5];
+            if (lightningcount > 5) {
+              for (int i = 0; i < 5; i++) lightningtext[i] = lightningtext[i + 1];
               lightningtext[5] = (datetimestamp + " Afstand: " + String(lightningDistKm) + "km");
-              lightningcount = 7;
+              lightningcount = 5;
             } else {
               lightningtext[lightningcount] = (datetimestamp + " Afstand: " + String(lightningDistKm) + "km");
             }
@@ -428,12 +430,12 @@ void loop(void) {
 }
 
 void setLightning() {
-  lightning.maskDisturber(true);
-  if (indoor) lightning.setIndoorOutdoor(0x12); else lightning.setIndoorOutdoor(0xE);
+  lightning.setMaskDisturber(true);
+  if (indoor) lightning.setIndoorOutdoor(AS3935_INDOOR); else lightning.setIndoorOutdoor(AS3935_OUTDOOR);
   lightning.setNoiseLevel(2);
-  lightning.watchdogThreshold(threshold);
-  lightning.spikeRejection(spike);
-  lightning.lightningThreshold(5);
+  lightning.setWatchdogThreshold(threshold);
+  lightning.setSpikeRejection(spike);
+  lightning.setLightningThreshold(1);
 
   Serial.println("Lightning watchdog threshold set to: " + String(lightning.readWatchdogThreshold()));
   Serial.println("Lightning spike rejection set to: " + String(lightning.readSpikeRejection()));
@@ -1974,82 +1976,3 @@ int splitString(const String& input, char delimiter, String* output, int maxItem
   return itemCount;
 }
 
-bool tuneAntenna() {
-  const float targetFrequency = 500.0; // Target frequency in kHz
-  const int num_samples = 20;
-  const int timeout_us = 10000; // Increase timeout for stability
-
-  lightning.changeDivRatio(16); // Set divider ratio
-
-  lightning.displayOscillator(true, 3);
-
-  float closestFrequency = MAX_FLOAT_VALUE; // Initialize with a large value
-  int best_cap_index = 0;
-
-  for (int i = 0; i < 16; i++) {
-    lightning.tuneCap(8 * i); // Set current index to capacitor value
-    delay(2);       // Time to stabilize frequency
-
-    float total_time = 0;
-    for (int j = 0; j < num_samples; j++) {
-      float sample_time = measureTime(timeout_us);
-      if (sample_time == 0) {
-        return false; // Interrupt pin not connected
-      }
-      total_time += sample_time;
-    }
-
-    // Calculate the measured frequency
-    float measuredFrequency = 1 / (total_time / num_samples) * 16 * 1000;
-
-    // Calculate the difference from the target frequency
-    float diff = abs(targetFrequency - measuredFrequency);
-
-    // Check if this capacitor value yields a closer frequency
-    if (diff < closestFrequency) {
-      closestFrequency = diff;
-      best_cap_index = i;
-    }
-  }
-
-  // Select the best capacitor value
-  lightning.tuneCap(8 * best_cap_index);
-
-  Serial.println("Sensor is gecalibreerd en ingesteld op de beste interne condensator!");
-  Serial.print("Condensatorwaarde na calibratie: ");
-  Serial.print(lightning.readTuneCap());
-  Serial.println(" pF.");
-  Serial.print("Ontvangerfrequentie na calibratie: ");
-  Serial.print(1 / measureTime(timeout_us) * 16 * 1000);
-  Serial.println(" kHz.");
-
-  lightning.displayOscillator(false, 3);
-
-  return lightning.calibrateOsc();
-}
-
-float measureTime(unsigned long timeout_us) {
-  unsigned long start_time = micros();
-  unsigned long elapsed_time;
-  int counter = 0;
-  bool curr = 0, prev = 0;
-
-  while (digitalRead(intPin)) {
-    elapsed_time = micros() - start_time;
-    if (elapsed_time > timeout_us) {
-      return 0; // Timeout reached
-    }
-  }
-
-  start_time = micros(); // Take timestamp of start
-  while (counter < 50) {
-    curr = digitalRead(intPin);
-    if (curr == 1 && prev == 0) {
-      counter++;
-    }
-    prev = curr;
-  }
-
-  elapsed_time = micros() - start_time;
-  return elapsed_time / 50.0;
-}
