@@ -1,6 +1,6 @@
 # Weerstation
 
-![alt text](https://www.radiokampweek.nl/wp-content/uploads/2023/03/bouwproject_2023.jpg)
+![alt text](https://www.pe5pvb.nl/wp-content/uploads/2023/05/bouwproject_2023.jpg)
 
 ## Inleiding
 Dit weerstation haalt alle weersinformatie voor jouw regio online op via een API van www.weerlive.nl. Jouw regio wordt bepaald aan de hand van de geografische coördinaten welke verkregen worden door de ingebouwde GPS ontvanger. Deze weersinformatie wordt elke 5 minuten vernieuwd. Mocht er een weerswaarschuwing gelden dan zal dit aangegeven worden met een rood knipperend uitroepteken. Druk op het uitroepteken om deze waarschuwing weer te geven. In dat zelfde scherm worden ook gedetecteerde bliksemontladingen weergegeven.
