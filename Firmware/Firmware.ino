@@ -14,7 +14,7 @@
 #include "DHT.h"                                // https://github.com/adafruit/DHT-sensor-library
 #include <EasyNextionLibrary.h>                 // https://github.com/Seithan/EasyNextionLibrary
 
-#define SOFTWAREVERSION 15
+#define SOFTWAREVERSION 16
 
 // Nederlandse tijdzone: CET (UTC+1) met zomertijd CEST (UTC+2)
 // M3.5.0/2 = laatste zondag maart om 02:00, M10.5.0/3 = laatste zondag oktober om 03:00
@@ -1046,15 +1046,19 @@ void getWeather() {
     return;
   }
 
-  // --- JSON payload streamen en parsen (geen tussenopslag als String) ---
+  // --- JSON payload ophalen en parsen ---
+  String response = https.getString();
+
   // Filter: alleen liveweer en wk_verw parsen, uur_verw overslaan (bespaart geheugen)
   StaticJsonDocument<200> filter;
   filter["liveweer"][0] = true;
   filter["wk_verw"] = true;
 
-  DynamicJsonDocument weer(4096);
-  DeserializationError error = deserializeJson(weer, https.getStream(), DeserializationOption::Filter(filter));
+  DynamicJsonDocument weer(8192);
+  DeserializationError error = deserializeJson(weer, response, DeserializationOption::Filter(filter));
   if (error) {                                      // Stop bij JSON fout
+    Serial.print("JSON parse fout: ");
+    Serial.println(error.c_str());
     https.end();
     return;
   }
