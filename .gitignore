@@ -1,0 +1,19 @@
+# PlatformIO
+Firmware/.pio/
+Firmware/.vscode/
+
+# Claude Code
+.claude/
+.claude*
+CLAUDE.md
+**/CLAUDE.md
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE
+*.swp
+*.swo
+*~
