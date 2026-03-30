@@ -1,6 +1,5 @@
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
-#include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 #include "WiFiConnect.h"
@@ -11,24 +10,21 @@
 #include <EEPROM.h>
 #include <WiFiConnectParam.h>
 #include <DFRobot_SGP40.h>
-#include "src/AS3935_ESP32.h"
+#include "src/AS3935_ESP32.h"                   // AS3935 library geoptimaliseerd voor ESP32
 #include "DHT.h"                              // https://github.com/adafruit/DHT-sensor-library
 #include <EasyNextionLibrary.h>               // https://github.com/Seithan/EasyNextionLibrary
-#include <Timezone.h>                         // https://github.com/JChristensen/Timezone
-#include <NTPClient.h>                        // https://github.com/arduino-libraries/NTPClient
 
 #define SOFTWAREVERSION 15
 
-TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};
-TimeChangeRule CET = {"CET ", Last, Sun, Oct, 3, 60};
-Timezone CE(CEST, CET);
+// Nederlandse tijdzone: CET (UTC+1) met zomertijd CEST (UTC+2)
+// M3.5.0/2 = laatste zondag maart om 02:00, M10.5.0/3 = laatste zondag oktober om 03:00
+#define NL_TIMEZONE "CET-1CEST,M3.5.0/2,M10.5.0/3"
+
 WiFiConnect wc;
 TinyGPSPlus gps;
 EasyNex Display(Serial2);
 DHT dht(32, DHT22);
 SoftwareSerial ss(12, 13);
-WiFiUDP ntpUDP;
-NTPClient NTPtimeClient(ntpUDP, "europe.pool.ntp.org");
 DFRobot_SGP40 mySgp40;
 AS3935_ESP32 lightning(AS3935_ADDR_DEFAULT);
 
@@ -308,7 +304,7 @@ void setup(void) {
   getIndoor();
   showRSSI();
   delay(1000);
-  NTPtimeClient.begin();
+  configTzTime(NL_TIMEZONE, "europe.pool.ntp.org");
   Display.writeNum("setkmu", kmu);
   Display.writeStr("page 1");
   showData();
@@ -1796,65 +1792,47 @@ void getGPS() {
     }
     if (!ntp) {
       if (gps.time.isValid() && gps.date.isValid()) {
-        setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+        // GPS levert UTC — stel systeemklok in via settimeofday
+        struct tm gpsUtc = {};
+        gpsUtc.tm_year = gps.date.year() - 1900;
+        gpsUtc.tm_mon  = gps.date.month() - 1;
+        gpsUtc.tm_mday = gps.date.day();
+        gpsUtc.tm_hour = gps.time.hour();
+        gpsUtc.tm_min  = gps.time.minute();
+        gpsUtc.tm_sec  = gps.time.second();
+        // mktime interpreteert als lokale tijd, corrigeer met tijdzone-offset
+        time_t epoch = mktime(&gpsUtc);
+        struct tm *check = localtime(&epoch);
+        epoch -= (mktime(check) - mktime(gmtime(&epoch)));
+        struct timeval tv = { .tv_sec = epoch, .tv_usec = 0 };
+        settimeofday(&tv, NULL);
       }
-    } else {
-      NTPtimeClient.update();
-      time_t epochTime = NTPtimeClient.getEpochTime();
-      struct tm *ptm = gmtime ((time_t *)&epochTime);
-      int monthDay = ptm->tm_mday;
-      int currentMonth = ptm->tm_mon + 1;
-      int currentYear = ptm->tm_year + 1900;
-      setTime(NTPtimeClient.getHours(), NTPtimeClient.getMinutes(), NTPtimeClient.getSeconds(), monthDay, currentMonth, currentYear);
     }
+    // NTP modus: configTzTime regelt synchronisatie automatisch
   }
-  FormatTime(CE);
+  FormatTime();
 }
 
-void FormatTime(Timezone tz) {
-  TimeChangeRule *tcr;
-  time_t t = tz.toLocal(now(), &tcr);
+void FormatTime() {
+  // localtime() past automatisch CET/CEST toe via configTzTime
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
 
-  String dayname;
-  if (weekday(t) == 1) dayname = "Zondag";
-  if (weekday(t) == 2) dayname = "Maandag";
-  if (weekday(t) == 3) dayname = "Dinsdag";
-  if (weekday(t) == 4) dayname = "Woensdag";
-  if (weekday(t) == 5) dayname = "Donderdag";
-  if (weekday(t) == 6) dayname = "Vrijdag";
-  if (weekday(t) == 7) dayname = "Zaterdag";
-  String dayname1;
-  if (weekday(t) == 1) dayname1 = "Ma";
-  if (weekday(t) == 2) dayname1 = "Di";
-  if (weekday(t) == 3) dayname1 = "Wo";
-  if (weekday(t) == 4) dayname1 = "Do";
-  if (weekday(t) == 5) dayname1 = "Vr";
-  if (weekday(t) == 6) dayname1 = "Za";
-  if (weekday(t) == 7) dayname1 = "Zo";
-  String dayname2;
-  if (weekday(t) == 1) dayname2 = "Di";
-  if (weekday(t) == 2) dayname2 = "Wo";
-  if (weekday(t) == 3) dayname2 = "Do";
-  if (weekday(t) == 4) dayname2 = "Vr";
-  if (weekday(t) == 5) dayname2 = "Za";
-  if (weekday(t) == 6) dayname2 = "Zo";
-  if (weekday(t) == 7) dayname2 = "Ma";
-  String monthname;
-  if (month(t) == 1) monthname = "jan";
-  if (month(t) == 2) monthname = "feb";
-  if (month(t) == 3) monthname = "mrt";
-  if (month(t) == 4) monthname = "apr";
-  if (month(t) == 5) monthname = "mei";
-  if (month(t) == 6) monthname = "jun";
-  if (month(t) == 7) monthname = "jul";
-  if (month(t) == 8) monthname = "aug";
-  if (month(t) == 9) monthname = "sep";
-  if (month(t) == 10) monthname = "okt";
-  if (month(t) == 11) monthname = "nov";
-  if (month(t) == 12) monthname = "dec";
+  const char* dagen[] = {"Zondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"};
+  const char* dagen_kort[] = {"Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"};
+  const char* maanden[] = {"jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"};
 
-  datetime = String(dayname + " " + String(day(t)) + " " + monthname + " " + String(year(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "") + String(minute(t)) + ":" + (second(t) < 10 ? "0" : "") + String(second(t)) + " ");
-  datetimestamp = (String(day(t)) + "/" + String(month(t)) + " " + String(hour(t)) + ":" + (minute(t) < 10 ? "0" : "")  + String(minute(t)) + " ");
+  String dayname = dagen[t->tm_wday];
+  String dayname1 = dagen_kort[(t->tm_wday + 1) % 7]; // Morgen
+  String dayname2 = dagen_kort[(t->tm_wday + 2) % 7]; // Overmorgen
+  String monthname = maanden[t->tm_mon];
+
+  char tijdbuf[40];
+  sprintf(tijdbuf, "%s %d %s %d %d:%02d:%02d ", dayname.c_str(), t->tm_mday, monthname.c_str(), t->tm_year + 1900, t->tm_hour, t->tm_min, t->tm_sec);
+  datetime = String(tijdbuf);
+
+  sprintf(tijdbuf, "%d/%d %d:%02d ", t->tm_mday, t->tm_mon + 1, t->tm_hour, t->tm_min);
+  datetimestamp = String(tijdbuf);
 
   if (gps.location.isValid() || ntp)
   {
